@@ -1,6 +1,7 @@
 package com.fireblaze.stamina_mod.events;
 
 import com.fireblaze.stamina_mod.capability.StaminaProvider;
+import com.fireblaze.stamina_mod.config.Settings;
 import com.fireblaze.stamina_mod.networking.ModMessages;
 import com.fireblaze.stamina_mod.networking.packet.StaminaDataSyncS2CPacket;
 import net.minecraft.core.BlockPos;
@@ -10,13 +11,15 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.common.ToolAction;
-import net.minecraftforge.common.ToolActions;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -58,17 +61,25 @@ public class PlayerTickHandler {
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
             // Bewegungsausdauer
             if (player.isSprinting()) {
-                stamina.consume(0.05f, 0.002f, legDamage, player);
+                // stamina.consume(0.05f, 0.002f, legDamage, player);
+                stamina.consume((float) Settings.getMovementCost("sprint", true), (float) Settings.getMovementCost("sprint", false), armDamage, player);
             } else if (isPlayerWalking(player)) {
-                stamina.consume(0.0075f, 0.001f, legDamage, player);
+                // stamina.consume(0.0075f, 0.001f, legDamage, player);
+                stamina.consume((float) Settings.getMovementCost("walk", true), (float) Settings.getMovementCost("walk", false), armDamage, player);
             }
 
-            if (player.isCrouching() || player.isSwimming() || player.isBlocking()) {
-                stamina.consume(0.0075f, 0.001f, legDamage, player);
+            if (player.isCrouching() || player.isSwimming()) {
+                // stamina.consume(0.0075f, 0.001f, legDamage, player);
+                stamina.consume((float) Settings.getMovementCost("crouch", true), (float) Settings.getMovementCost("crouch", false), armDamage, player);
             }
 
             if (player.getDeltaMovement().y > 0 && !player.onGround()) {
-                stamina.consume(0.15f, 0.0075f, legDamage, player);
+                // stamina.consume(0.15f, 0.0075f, legDamage, player);
+                stamina.consume((float) Settings.getMovementCost("jump", true), (float) Settings.getMovementCost("jump", false), armDamage, player);
+            }
+
+            if (player.isBlocking()) {
+                stamina.consume((float) Settings.getCombatCost("block", true), (float) Settings.getCombatCost("block", false), armDamage, player);
             }
 
             // Block-Abbau Stamina
@@ -79,10 +90,10 @@ public class PlayerTickHandler {
             float longStam = stamina.getLongStamina();
 
             // Low Stamina Effekte
-            if (shortStam <= 5) applyNegativeEffects(player, 2);
-            else if (shortStam <= 10) applyNegativeEffects(player, 1);
-            else if (shortStam <= 15) applyNegativeEffects(player, 0);
-            else if (shortStam >= 90) applyPositiveEffects(player, 0);
+            if (shortStam <= Settings.getNegativeEffect3Threshold()) applyNegativeEffects(player, 2);
+            else if (shortStam <= Settings.getNegativeEffect2Threshold()) applyNegativeEffects(player, 1);
+            else if (shortStam <= Settings.getNegativeEffect1Threshold()) applyNegativeEffects(player, 0);
+            else if (shortStam >= Settings.getPositiveEffectThreshold()) applyPositiveEffects(player, 0);
 
             // Stamina Synchronisation
             if (shortStam != shortStamina[0] || longStam != longStamina[0]) {
@@ -113,24 +124,19 @@ public class PlayerTickHandler {
 
                 if (heldItem.isCorrectToolForDrops(blockState)) {
                     if (blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
-                        System.out.println("Pickaxe");
-                        stamina.consume(0.06f, 0.005f, armDamage, hardness, player);
+                        stamina.consume((float) Settings.getMiningCost("pickaxe", true), (float) Settings.getMiningCost("pickaxe", false), armDamage, hardness, player);
                     } else if (blockState.is(BlockTags.MINEABLE_WITH_AXE)) {
-                        System.out.println("Axe");
-                        stamina.consume(0.055f, 0.0025f, armDamage, hardness, player);
+                        stamina.consume((float) Settings.getMiningCost("axe", true), (float) Settings.getMiningCost("axe", false), armDamage, hardness, player);
                     } else if (blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)) {
-                        System.out.println("Shovel");
-                        stamina.consume(0.0525f, 0.0001f, armDamage, hardness, player);
+                        stamina.consume((float) Settings.getMiningCost("shovel", true), (float) Settings.getMiningCost("shovel", false), armDamage, hardness, player);
                     } else if (blockState.is(BlockTags.MINEABLE_WITH_HOE)) {
-                        System.out.println("Hoe");
-                        stamina.consume(0.0525f, 0.001f, armDamage, hardness, player);
+                        stamina.consume((float) Settings.getMiningCost("hoe", true), (float) Settings.getMiningCost("hoe", false), armDamage, hardness, player);
                     } else {
-                        System.out.println("Unknown Tool");
-                        stamina.consume(0.125f, 0.0125f, armDamage, hardness, player);
+                        stamina.consume((float) Settings.getMiningCost("unknown", true), (float) Settings.getMiningCost("unknown", false), armDamage, hardness, player);
                     }
                 } else {
                     // Faust / falsches Werkzeug
-                    stamina.consume(0.125f, 0.0125f, armDamage, hardness, player);
+                    stamina.consume((float) Settings.getMiningCost("hand", true), (float) Settings.getMiningCost("hand", false), armDamage, hardness, player);
                 }
 
             }
@@ -160,6 +166,8 @@ public class PlayerTickHandler {
         refreshEffect(player, MobEffects.MOVEMENT_SLOWDOWN, amplifier, duration);
         refreshEffect(player, MobEffects.DIG_SLOWDOWN, amplifier, duration);
         refreshEffect(player, MobEffects.WEAKNESS, amplifier, duration);
+        if (amplifier >= 1) refreshEffect(player, MobEffects.HUNGER, 0, duration);
+        if (amplifier == 2) refreshEffect(player, MobEffects.BLINDNESS, 0, duration);
     }
 
     public static void applyPositiveEffects(Player player, int amplifier) {
@@ -171,8 +179,30 @@ public class PlayerTickHandler {
 
     private static void refreshEffect(Player player, MobEffect effect, int amplifier, int duration) {
         MobEffectInstance current = player.getEffect(effect);
-        if (current == null || current.getDuration() <= 10 || current.getAmplifier() != amplifier) {
+        if (current == null || current.getDuration() <= 20 || current.getAmplifier() != amplifier) {
             player.addEffect(new MobEffectInstance(effect, duration, amplifier, false, false));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAttackEntity(AttackEntityEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+
+        player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+            stamina.consume((float) Settings.getCombatCost("hit", true), (float) Settings.getCombatCost("hit", false), 0, player);
+            System.out.println("hit enemy and consumed " + Settings.getCombatCost("hit", true) + " Stamina");
+        });
+    }
+    @SubscribeEvent
+    public static void onLivingDamage(LivingDamageEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            float damage = event.getAmount();
+
+            player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+                // stamina.consume(damage, 0.1f * damage, 1, player);
+                stamina.consume((float) Settings.getCombatCost("hit", true) * damage, (float) Settings.getCombatCost("hit", false) * damage, 0, player);
+            });
         }
     }
 
@@ -184,8 +214,8 @@ public class PlayerTickHandler {
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
             BlockState blockState = event.getLevel().getBlockState(event.getPos());
             if (!blockState.isAir()) {
-                stamina.consume(0.175f, 0.015f, 0, player);
-                System.out.println("consumed Stamina for interacting");
+                // stamina.consume(0.175f, 0.015f, 0, player);
+                stamina.consume((float) Settings.getInteractCost("click", true), (float) Settings.getInteractCost("click", false), 0, player);
             }
         });
     }
@@ -210,11 +240,35 @@ public class PlayerTickHandler {
     }
 
     @SubscribeEvent
-    public void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+    public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         float armDamage = 0;
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
-            stamina.consume(0.0025f, 0.0005f, armDamage, player);
+            // stamina.consume(0.0025f, 0.0005f, armDamage, player);
+            stamina.consume((float) (Settings.getInteractCost("place", true) - Settings.getInteractCost("click", true)), (float) (Settings.getInteractCost("place", false) - Settings.getInteractCost("click", false)), 0, player);
         });
+    }
+
+    @SubscribeEvent
+    public static void onFoodEaten(LivingEntityUseItemEvent.Finish event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        ItemStack stack = event.getItem();
+        Item item = stack.getItem();
+
+        // Prüfen, ob es ein Nahrungsmittel ist
+        if (item.isEdible()) {
+            FoodProperties food = item.getFoodProperties();
+
+            if (food != null) {
+                int nutrition = food.getNutrition();              // Hungerpunkte
+                float saturation = food.getSaturationModifier();  // Sättigungswert
+
+                // Stamina erhöhen
+                player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+                    stamina.foodEaten(nutrition, saturation);
+                });
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.network.NetworkHooks;
+import com.fireblaze.stamina_mod.config.Settings;
 
 public class SeatEntity extends Entity {
 
@@ -90,9 +91,9 @@ public class SeatEntity extends Entity {
                     }
 
                     if (campfireNearby) {
-                        stamina.rest(3f, hardnessFactor); // Beispiel: Bonus-Regeneration pro Tick
+                        stamina.rest((float) (Settings.getRegenerationConfigs("sitBonus") + Settings.getRegenerationConfigs("campfireBonus")), hardnessFactor); // Beispiel: Bonus-Regeneration pro Tick
                     } else {
-                        stamina.rest(1.5f, hardnessFactor); // Normal-Regeneration
+                        stamina.rest((float) Settings.getRegenerationConfigs("sitBonus"), hardnessFactor); // Normal-Regeneration
                     }
                 });
             }

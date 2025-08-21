@@ -4,6 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;
+import com.fireblaze.stamina_mod.config.Settings;
 
 import java.util.Objects;
 
@@ -32,28 +33,28 @@ public class Stamina {
     public void tick(Player player, float damage) {
         float longStamina = 0.0f;
         float factor = 1.0f;
-        regenerate(factor);
+        regenerate(factor, factor);
 
     }
 
-    public void rest(float sitFactor, float hardnessFactor) {
+    public void rest(float restFactor, float hardnessFactor) {
         float damageMultiplier = 1.0f; // todo damage +* constant
-        BASE_REGEN = 0.002f;
-        AMPLIFIED_REGEN = (float) Math.min(BASE_REGEN * damageMultiplier * (1 + staminaLvl * 0.02) * sitFactor * hardnessFactor, MAX_STAMINA);
+        BASE_REGEN = (float) Settings.getRegenerationConfigs("baseRegenLong");
+        AMPLIFIED_REGEN = (float) Math.min(BASE_REGEN * damageMultiplier * (1 + staminaLvl * 0.03) * restFactor * hardnessFactor, MAX_STAMINA);
         this.longStamina = Math.min(longStamina + AMPLIFIED_REGEN, MAX_STAMINA);
-        regenerate(sitFactor * hardnessFactor);
+        regenerate(restFactor, hardnessFactor);
     }
 
-    public void regenerate(float factor) {
+    public void regenerate(float restFactor, float hardnessFactor) {
         float damageMultiplier = 1.0f; // todo damage +* constant
         if (shortStamina < longStamina) {
-            BASE_REGEN = 0.000175f * longStamina;
-            AMPLIFIED_REGEN = (float) Math.min(BASE_REGEN * damageMultiplier * (1 + staminaLvl * 0.05) * factor, longStamina);
+            BASE_REGEN = (float) Settings.getRegenerationConfigs("baseRegenShort") * longStamina;
+            AMPLIFIED_REGEN = (float) Math.min(BASE_REGEN * damageMultiplier * (1 + staminaLvl * 0.05) * restFactor * hardnessFactor, longStamina);
             this.shortStamina = Math.min(shortStamina + AMPLIFIED_REGEN, longStamina);
         }
 
         tickCounter++;
-        if (tickCounter % 100 == 0) {
+        if (tickCounter % 500 == 0) {
             System.out.println("[regenerating] stamina: " + shortStamina + " / " + longStamina + " + " + AMPLIFIED_REGEN);
             System.out.println("[current] Long Stamina: " + longStamina);
             System.out.println("[Experience] Current: " + staminaExp + "/" + getExperienceToNextLevel() + " | " + staminaLvl);
@@ -63,7 +64,7 @@ public class Stamina {
     public void consume(float shortStamina, float longStamina, float damage, Player player) {
         float damageMultiplier = 1.0f; // todo damage +* constant
         this.shortStamina = (float) Math.max(this.shortStamina - shortStamina * (1 - staminaLvl * 0.01) * damageMultiplier, MIN_STAMINA);
-        this.longStamina = (float) Math.max(this.longStamina - longStamina * (1 - staminaLvl * 0.01) * damageMultiplier, MIN_STAMINA);
+        this.longStamina = (float) Math.max(this.longStamina - longStamina * (1 - staminaLvl * 0.015) * damageMultiplier, MIN_STAMINA);
         //this.shortStamina = Math.max(this.shortStamina - shortStamina * damageMultiplier, MIN_STAMINA);
         //this.longStamina = Math.max(this.longStamina - longStamina, MIN_STAMINA);
         addExperience(shortStamina + longStamina, player);
@@ -83,12 +84,19 @@ public class Stamina {
             System.out.println("[mining] stamina: " + this.shortStamina);
         }
     }
+    public void foodEaten(int nutrition, float saturation) {
+        float longStaminaGain = (float) ((nutrition + saturation) * Settings.getRegenerationConfigs("foodFactor"));
+        this.longStamina += longStaminaGain;
+    }
     public void addExperience(float exp_gains, Player player) {
         staminaExp += exp_gains;
-        while (staminaExp >= getExperienceToNextLevel()) {
+        while (staminaExp >= getExperienceToNextLevel() && staminaLvl < 20) {
             staminaExp -= getExperienceToNextLevel();
             staminaLvl++;
             onLevelUp(player);
+        }
+        if (staminaLvl >= 20) {
+            staminaExp = 0;
         }
     }
     private float getExperienceToNextLevel() {
@@ -140,7 +148,6 @@ public class Stamina {
     public void setStaminaLvl(int staminaLvl) {
         this.staminaLvl = staminaLvl;
     }
-
     public void setStaminaExp(int staminaExp) {
         this.staminaExp = staminaExp;
     }

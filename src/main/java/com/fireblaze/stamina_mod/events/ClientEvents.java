@@ -34,11 +34,14 @@ public class ClientEvents {
         int width = mc.getWindow().getGuiScaledWidth();
         int height = mc.getWindow().getGuiScaledHeight();
 
-        int barWidth = (int) (0.4 * width);
+        // === Neue Breite = Hotbar-Breite ===
+        int hotbarWidth = 182; // Vanilla Hotbar Standardbreite
+        int barWidth = hotbarWidth;
+
         int barHeight = 3;
-        int cornerRadius = 6; // bleibt zur späteren Verwendung / optischen Orientierung
-        int x = (width - barWidth) / 2;
-        int y = height - 50;
+        int cornerRadius = 6; // optische Orientierung
+        int x = (width - barWidth) / 2; // horizontal zentriert wie Hotbar
+        int y = height - 54; // bleibt unverändert
 
         // Werte holen
         float maxStamina = ClientStaminaData.getPlayerMaxStamina();
@@ -53,20 +56,16 @@ public class ClientEvents {
         int debuffThreshold = 15;
         int debuffWidth = (int) (barWidth * (debuffThreshold / maxStamina));
 
-        // --- 1) ZUERST: Die Füllungen (transparent dort, wo nichts gefüllt ist) ---
-        // longStamina Bereich (hellgrau, halbtransparent)
+        // --- 1) Füllungen ---
         drawRoundedRectPartial(graphics, x, y, longFill, barHeight, cornerRadius, 0x99CCCCCC);
-
-        // shortStamina Bereich (hellblau)
         drawRoundedRectPartialGradient(graphics, x, y, shortFill, barHeight, cornerRadius, 0xFF4A90E2, 0xFF3366FF);
 
-        // Roter Debuff-Bereich (hellrot), falls shortStamina <= 15
         if (shortStamina <= debuffThreshold) {
             int redDrawWidth = Math.min(debuffWidth, shortFill);
             drawRoundedRectPartial(graphics, x, y, redDrawWidth, barHeight, cornerRadius, 0x99FF5555);
         }
 
-        // --- 2) DANN: Den schwarzen Rand AUF DIESE FÜLLUNGEN zeichnen (damit Innenbereich transparent bleibt) ---
+        // --- 2) Schwarzer Rand ---
         drawBorder(graphics, x, y, barWidth, barHeight, 1, 0xFF000000);
     }
 
