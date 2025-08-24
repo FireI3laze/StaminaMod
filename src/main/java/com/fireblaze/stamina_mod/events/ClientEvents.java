@@ -27,7 +27,7 @@ public class ClientEvents {
         if (!event.getOverlay().id().equals(VanillaGuiOverlay.EXPERIENCE_BAR.id())) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
+        if (mc.player == null || mc.player.isCreative() || mc.player.isSpectator()) return;
 
         GuiGraphics graphics = event.getGuiGraphics();
 

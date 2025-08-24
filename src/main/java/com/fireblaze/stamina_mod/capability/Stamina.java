@@ -1,142 +1,152 @@
 package com.fireblaze.stamina_mod.capability;
 
+import com.fireblaze.stamina_mod.config.StaminaConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;
 import com.fireblaze.stamina_mod.config.Settings;
+import net.minecraft.sounds.SoundSource;
 
 import java.util.Objects;
 
 public class Stamina {
-    private float shortStamina;
-    private float longStamina;
-    private static final float MIN_STAMINA = 0;
-    private static final float MAX_STAMINA = 100;
+    private float shortStamina = 100.0F;
+    private float longStamina = 100.0F;
+    private static final float MIN_STAMINA = 0.0F;
+    private static final float MAX_STAMINA = 100.0F;
     private float BASE_REGEN;
     private float AMPLIFIED_REGEN;
     private float armStrength;
     private float legStrength;
     private float staminaConsumption;
-    private int staminaLvl;
+    private int staminaLvl = 0;
     private static final int MAX_STAMINA_LEVEL = 20;
-    private float staminaExp;
+    private float staminaExp = 0.0F;
+    private int tickCounter = 0;
 
-    private int tickCounter = 0; // todo temp
     public Stamina() {
-        this.shortStamina = MAX_STAMINA;
-        this.longStamina = MAX_STAMINA;
-        this.staminaLvl = 0;
-        this.staminaExp = 0;
     }
 
-    public void tick(Player player, float damage) {
-        float longStamina = 0.0f;
-        float factor = 1.0f;
-        regenerate(factor, factor);
-
+    public void tick(Player player, int tickMultiplier) {
+        if (player.isCreative() || player.isSpectator()) return;
+        this.regenerate(player, 1.0f, tickMultiplier);
     }
 
-    public void rest(float restFactor, float hardnessFactor) {
-        float damageMultiplier = 1.0f; // todo damage +* constant
-        BASE_REGEN = (float) Settings.getRegenerationConfigs("baseRegenLong");
-        AMPLIFIED_REGEN = (float) Math.min(BASE_REGEN * damageMultiplier * (1 + staminaLvl * 0.03) * restFactor * hardnessFactor, MAX_STAMINA);
-        this.longStamina = Math.min(longStamina + AMPLIFIED_REGEN, MAX_STAMINA);
-        regenerate(restFactor, hardnessFactor);
+    public void rest(Player player, float restFactor, float hardnessFactor) {
+        if (player.isCreative() || player.isSpectator()) return;
+        float damageMultiplier = 1.0F;
+        this.BASE_REGEN = (float)Settings.getRegenerationConfigs("baseRegenLong");
+        this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.03) * (double)restFactor * (double)hardnessFactor, 100.0);
+        this.longStamina = Math.min(this.longStamina + this.AMPLIFIED_REGEN, 100.0F);
+        this.regenerate(player, restFactor, hardnessFactor);
     }
 
-    public void regenerate(float restFactor, float hardnessFactor) {
-        float damageMultiplier = 1.0f; // todo damage +* constant
-        if (shortStamina < longStamina) {
-            BASE_REGEN = (float) Settings.getRegenerationConfigs("baseRegenShort") * longStamina;
-            AMPLIFIED_REGEN = (float) Math.min(BASE_REGEN * damageMultiplier * (1 + staminaLvl * 0.05) * restFactor * hardnessFactor, longStamina);
-            this.shortStamina = Math.min(shortStamina + AMPLIFIED_REGEN, longStamina);
+    public void regenerate(Player player, float restFactor, float hardnessFactor) {
+        float damageMultiplier = 1.0F;
+        if (this.shortStamina < this.longStamina) {
+            this.BASE_REGEN = (float)Settings.getRegenerationConfigs("baseRegenShort") * this.longStamina;
+            this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.05) * (double)restFactor * (double)hardnessFactor, (double)this.longStamina);
+            this.shortStamina = Math.min(this.shortStamina + this.AMPLIFIED_REGEN, this.longStamina);
         }
 
-        tickCounter++;
-        if (tickCounter % 500 == 0) {
-            System.out.println("[regenerating] stamina: " + shortStamina + " / " + longStamina + " + " + AMPLIFIED_REGEN);
-            System.out.println("[current] Long Stamina: " + longStamina);
-            System.out.println("[Experience] Current: " + staminaExp + "/" + getExperienceToNextLevel() + " | " + staminaLvl);
-        }
-    }
-
-    public void consume(float shortStamina, float longStamina, float damage, Player player) {
-        float damageMultiplier = 1.0f; // todo damage +* constant
-        this.shortStamina = (float) Math.max(this.shortStamina - shortStamina * (1 - staminaLvl * 0.01) * damageMultiplier, MIN_STAMINA);
-        this.longStamina = (float) Math.max(this.longStamina - longStamina * (1 - staminaLvl * 0.015) * damageMultiplier, MIN_STAMINA);
-        //this.shortStamina = Math.max(this.shortStamina - shortStamina * damageMultiplier, MIN_STAMINA);
-        //this.longStamina = Math.max(this.longStamina - longStamina, MIN_STAMINA);
-        addExperience(shortStamina + longStamina, player);
-        if (tickCounter % 20 == 0) {
-            System.out.println( "[moving] stamina: " + this.shortStamina);
+        ++this.tickCounter;
+        if (this.tickCounter % 500 == 0) {
+            System.out.println("[regenerating] stamina: " + this.shortStamina + " / " + this.longStamina + " + " + this.AMPLIFIED_REGEN);
+            System.out.println("[current] Long Stamina: " + this.longStamina);
+            float var10001 = this.staminaExp;
+            System.out.println("[Experience] Current: " + var10001 + "/" + this.getExperienceToNextLevel() + " | " + this.staminaLvl);
         }
 
     }
-    public void consume(float shortStamina, float longStamina, float damage, float blockHardness, Player player) {
-        float damageMultiplier = 1.0f; // todo damage +* constant
-        this.shortStamina = (float) Math.max(0, this.shortStamina - shortStamina * (1 - staminaLvl * 0.005) * damageMultiplier);
-        this.longStamina = (float) Math.max(0, this.longStamina - longStamina * (1 - staminaLvl * 0.01) * damageMultiplier);
-        if (staminaLvl < MAX_STAMINA_LEVEL) {
-            addExperience(shortStamina + longStamina, player);
-        }
-        if (tickCounter % 20 == 0) {
-            System.out.println("[mining] stamina: " + this.shortStamina);
+
+    public void consume(float shortStamina, float longStamina, float armorMultiplier, Player player) {
+        if (player.isCreative() || player.isSpectator()) return;
+        this.shortStamina = (float)Math.max(this.shortStamina - shortStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.015), 0.0);
+        this.longStamina = (float)Math.max(this.longStamina - longStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.03), 0.0);
+        this.addExperience(shortStamina + longStamina, player);
+        float armor = (float)Math.max(this.shortStamina - shortStamina * (1.0 - this.staminaLvl * 0.015) * armorMultiplier, 0.0);
+        float noArmor = (float)Math.max(this.shortStamina - shortStamina * (1.0 - this.staminaLvl * 0.015) * 1, 0.0);
+        // System.out.println("No Armor: " + noArmor + " | Armor: " + armor + " | Difference: " + (armor - noArmor));
+    }
+
+    public void consume(float shortStamina, float longStamina, float armorMultiplier, float blockHardness, Player player) {
+        if (player.isCreative() || player.isSpectator()) return;
+        this.shortStamina = (float)Math.max(0.0, this.shortStamina - shortStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.0075));
+        this.longStamina = (float)Math.max(0.0, this.longStamina - longStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.02));
+        if (this.staminaLvl < 20) {
+            this.addExperience(shortStamina + longStamina, player);
         }
     }
-    public void foodEaten(int nutrition, float saturation) {
-        float longStaminaGain = (float) ((nutrition + saturation) * Settings.getRegenerationConfigs("foodFactor"));
+
+    public void foodEaten(Player player, int nutrition, float saturation) {
+        if (player.isCreative() || player.isSpectator()) return;
+        float longStaminaGain = (float)((double)((float)nutrition + saturation) * Settings.getRegenerationConfigs("foodFactor"));
         this.longStamina += longStaminaGain;
     }
+
     public void addExperience(float exp_gains, Player player) {
-        staminaExp += exp_gains;
-        while (staminaExp >= getExperienceToNextLevel() && staminaLvl < 20) {
-            staminaExp -= getExperienceToNextLevel();
-            staminaLvl++;
-            onLevelUp(player);
+        this.staminaExp += exp_gains;
+
+        while(this.staminaExp >= this.getExperienceToNextLevel() && this.staminaLvl < 20) {
+            this.staminaExp -= this.getExperienceToNextLevel();
+            ++this.staminaLvl;
+            this.onLevelUp(player);
         }
-        if (staminaLvl >= 20) {
-            staminaExp = 0;
+
+        if (this.staminaLvl >= 20) {
+            this.staminaExp = 0.0F;
         }
+
     }
+
     private float getExperienceToNextLevel() {
-        // Exponentiell steigende XP-Kosten
-        return (100 * staminaLvl * staminaLvl);
+        return (float)(100 * this.staminaLvl * this.staminaLvl);
     }
 
     private void onLevelUp(Player player) {
         // Nachricht im Chat (sichtbar für diesen Spieler)
-        player.sendSystemMessage(Component.literal("§aYou have reached Level " + staminaLvl));
+        player.displayClientMessage(
+                Component.literal("§aYou have reached Stamina Level " + staminaLvl),
+                true
+        );
 
         // Optional: Sound abspielen
-        player.playSound(SoundEvents.PLAYER_LEVELUP, 100.0F, 1.0F);
+        player.playNotifySound(SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     public void strength_add_exp(String bodyPart, float exp_gains) {
-        if (Objects.equals(bodyPart, "leg")) {
-
+        if (!Objects.equals(bodyPart, "leg") && Objects.equals(bodyPart, "arm")) {
         }
-        else if (Objects.equals(bodyPart, "arm")) {
 
-        }
     }
+
     public float resetStamina() {
-        this.shortStamina = MAX_STAMINA;
-        this.longStamina = MAX_STAMINA;
-        return  MAX_STAMINA;
+        this.shortStamina = 100.0F;
+        this.longStamina = 100.0F;
+        return 100.0F;
     }
 
     public float getShortStamina() {
-        return shortStamina;
+        return this.shortStamina;
     }
+
     public float getLongStamina() {
-        return longStamina;
+        return this.longStamina;
     }
+
     public float getLongStaminaCap() {
-        return MAX_STAMINA;
+        return 100.0F;
     }
-    public float getStaminaExp() { return staminaExp; }
-    public int getStaminaLvl() { return staminaLvl; }
+
+    public float getStaminaExp() {
+        return this.staminaExp;
+    }
+
+    public int getStaminaLvl() {
+        return this.staminaLvl;
+    }
+
     public void setShortStamina(float shortStamina) {
         this.shortStamina = shortStamina;
     }
@@ -148,10 +158,10 @@ public class Stamina {
     public void setStaminaLvl(int staminaLvl) {
         this.staminaLvl = staminaLvl;
     }
-    public void setStaminaExp(int staminaExp) {
+
+    public void setStaminaExp(float staminaExp) {
         this.staminaExp = staminaExp;
     }
-
 
     public void copyFrom(Stamina source) {
         this.shortStamina = source.shortStamina;

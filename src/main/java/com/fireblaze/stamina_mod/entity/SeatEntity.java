@@ -1,9 +1,14 @@
 package com.fireblaze.stamina_mod.entity;
 
 import com.fireblaze.stamina_mod.capability.StaminaProvider;
+import com.fireblaze.stamina_mod.comfort.ComfortCalculator;
+import com.fireblaze.stamina_mod.comfort.ComfortProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
@@ -26,77 +31,46 @@ public class SeatEntity extends Entity {
     @Override
     public void tick() {
         super.tick();
-        if (!this.level().isClientSide) {
+        if (this.level().isClientSide) return;
 
-            // Falls ein Move geplant ist
-            if (moveDelay > 0) {
-                moveDelay--;
-            } else if (moveDelay == 0 && playerToMove != null) {
+        // Falls ein Move geplant ist (Spieler nach Tick auf Sitzposition setzen)
+        if (moveDelay > 0) {
+            moveDelay--;
+        } else if (moveDelay == 0 && playerToMove != null) {
+            BlockPos posBelow = this.blockPosition();
+            BlockState state = this.level().getBlockState(posBelow);
+            VoxelShape shape = state.getCollisionShape(this.level(), posBelow);
+            double height = shape.isEmpty() ? 1.0 : shape.max(net.minecraft.core.Direction.Axis.Y);
 
-                // Position des Blocks unter der Sitz-Entity
-                BlockPos posBelow = this.blockPosition();
-                BlockState state = this.level().getBlockState(posBelow);
-                VoxelShape shape = state.getCollisionShape(this.level(), posBelow);
+            playerToMove.setPos(playerToMove.getX(), posBelow.getY() + height, playerToMove.getZ());
+            playerToMove = null;
+            moveDelay = -1;
 
-                // Standardhöhe 1.0 falls Shape leer ist (z.B. Luftblock)
-                double height = shape.isEmpty() ? 1.0 : shape.max(net.minecraft.core.Direction.Axis.Y);
+            // Sitz löschen
+            this.discard();
+        }
 
-                // Spieler auf die korrekte Höhe setzen
-                playerToMove.setPos(
-                        playerToMove.getX(),
-                        posBelow.getY() + height,
-                        playerToMove.getZ()
-                );
+        // Sitz löschen, wenn leer und kein Move geplant
+        if (this.getPassengers().isEmpty() && moveDelay == -1) {
+            this.discard();
+            return;
+        }
 
-                playerToMove = null;
-                moveDelay = -1;
+        // Tick-Logik für Sitzbonus / Regeneration
+        if (this.getFirstPassenger() != null) {
+            Player player = (Player) this.getFirstPassenger();
 
-                // Sitz jetzt löschen
-                this.discard();
-            }
+            BlockPos posBelow = this.blockPosition();
+            BlockState state = this.level().getBlockState(posBelow);
+            float hardness = state.getDestroySpeed(this.level(), posBelow);
+            float hardnessFactor = hardness > 0 ? 1.0f / hardness : 1.0f;
 
-            // Sitz löschen, wenn leer und kein Move geplant ist
-            if (this.getPassengers().isEmpty() && moveDelay == -1) {
-                this.discard();
-            }
-            else {
-                if (this.getFirstPassenger() == null) return;
-                Player player = (Player) this.getFirstPassenger();
-
-                BlockPos posBelow = this.blockPosition();
-                BlockState state = this.level().getBlockState(posBelow);
-                float hardness = state.getDestroySpeed(this.level(), posBelow);
-
-                player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
-                    float hardnessFactor = hardness > 0 ? 1.0f / hardness : 1.0f;
-
-                    // Radius um die Sitz-Position prüfen
-                    boolean campfireNearby = false;
-                    BlockPos pos = this.blockPosition();
-                    int radius = 4;
-
-                    // Prüfe X und Z in einem Radius von 4, Y nur +-1 vom Sitzblock
-                    for (int x = -radius; x <= radius; x++) {
-                        for (int y = 0; y <= 2; y++) {  // nur ein Block unterhalb bis ein Block oberhalb
-                            for (int z = -radius; z <= radius; z++) {
-                                BlockPos checkPos = pos.offset(x, y, z);
-                                if (this.level().getBlockState(checkPos).getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) {
-                                    campfireNearby = true;
-                                    break;  // springt aus der Z-Schleife
-                                }
-                            }
-                            if (campfireNearby) break; // springt aus der Y-Schleife
-                        }
-                        if (campfireNearby) break; // springt aus der X-Schleife
-                    }
-
-                    if (campfireNearby) {
-                        stamina.rest((float) (Settings.getRegenerationConfigs("sitBonus") + Settings.getRegenerationConfigs("campfireBonus")), hardnessFactor); // Beispiel: Bonus-Regeneration pro Tick
-                    } else {
-                        stamina.rest((float) Settings.getRegenerationConfigs("sitBonus"), hardnessFactor); // Normal-Regeneration
-                    }
+            player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+                player.getCapability(ComfortProvider.COMFORT_CAP).ifPresent(cap -> {
+                    double comfort = cap.getComfortLevel(); // nur abrufen, nicht neu berechnen
+                    stamina.rest(player, (float) (comfort * Settings.getRegenerationConfigs("comfortRegMultiplier")), hardnessFactor / 1.5f);
                 });
-            }
+            });
         }
     }
 

@@ -1,8 +1,12 @@
 package com.fireblaze.stamina_mod.events;
 
 import com.fireblaze.stamina_mod.capability.StaminaProvider;
+import com.fireblaze.stamina_mod.comfort.ComfortCalculator;
+import com.fireblaze.stamina_mod.comfort.ComfortUtils;
+import com.fireblaze.stamina_mod.config.Settings;
 import com.fireblaze.stamina_mod.networking.ModMessages;
 import com.fireblaze.stamina_mod.networking.packet.StaminaDataSyncS2CPacket;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerWakeUpEvent;
 import net.minecraftforge.event.level.SleepFinishedTimeEvent;
@@ -12,9 +16,7 @@ import net.minecraft.world.entity.player.Player;
 
 import net.minecraft.server.level.ServerLevel;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class PlayerSleepHandler {
     private static final Map<UUID, Float> StaminaMap = new HashMap<>();
@@ -28,6 +30,7 @@ public class PlayerSleepHandler {
         ServerLevel level = (ServerLevel) event.getLevel();
 
         for (ServerPlayer player : level.getPlayers(p -> true)) {
+            if (player.isCreative() || player.isSpectator()) return;
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
                 float MAX_STAMINA = stamina.resetStamina();
                 ModMessages.sendToPlayer(new StaminaDataSyncS2CPacket(MAX_STAMINA), player);

@@ -8,7 +8,10 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import com.fireblaze.stamina_mod.comfort.ComfortHelper;
+import com.fireblaze.stamina_mod.config.Settings;
 
 import java.util.Collection;
 
@@ -108,6 +111,18 @@ public class StaminaCommands {
                                                         }))
                                         )))
         );
+
+        dispatcher.register(
+                Commands.literal("comfort_reset")
+                        .requires(source -> source.hasPermission(2)) // nur OPs
+                        .executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            ServerLevel level = player.serverLevel();
+                            ComfortHelper.resetHighlightedBlocks(level);
+                            ctx.getSource().sendSuccess(() -> Component.literal("Highlighted blocks reset!"), true);
+                            return Command.SINGLE_SUCCESS;
+                        })
+        );
     }
 
     // ===== LEVEL METHODS =====
@@ -119,7 +134,7 @@ public class StaminaCommands {
         for (ServerPlayer player : players) {
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
                 stamina.setStaminaLvl(value);
-                stamina.setStaminaExp(0);
+                stamina.setStaminaExp(0.0f);
                 source.sendSuccess(() -> Component.literal(
                         player.getName().getString() + " Stamina Level set to " + value), true);
             });
@@ -167,7 +182,7 @@ public class StaminaCommands {
     private static int setExp(Collection<ServerPlayer> players, int value, CommandSourceStack source) {
         for (ServerPlayer player : players) {
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
-                stamina.setStaminaExp(value);
+                stamina.setStaminaExp((float) value);
                 source.sendSuccess(() -> Component.literal(
                         player.getName().getString() + " Stamina Experience set to " + value), true);
             });
@@ -183,7 +198,7 @@ public class StaminaCommands {
         for (ServerPlayer player : players) {
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
                 float newExp = stamina.getStaminaExp() + amount;
-                stamina.setStaminaExp((int) newExp);
+                stamina.setStaminaExp(newExp);
                 source.sendSuccess(() -> Component.literal(
                         player.getName().getString() + " Stamina Experience increased by " + amount + " (now: " + newExp + ")"), true);
             });
@@ -199,7 +214,7 @@ public class StaminaCommands {
         for (ServerPlayer player : players) {
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
                 float newExp = Math.max(0, stamina.getStaminaExp() - amount);
-                stamina.setStaminaExp((int) newExp);
+                stamina.setStaminaExp(newExp);
                 source.sendSuccess(() -> Component.literal(
                         player.getName().getString() + " Stamina Experience decreased by " + amount + " (now: " + newExp + ")"), true);
             });

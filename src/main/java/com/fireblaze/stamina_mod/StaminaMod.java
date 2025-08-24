@@ -23,6 +23,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import com.fireblaze.stamina_mod.events.PlayerTickHandler;
 import com.fireblaze.stamina_mod.events.PlayerSleepHandler;
+import com.fireblaze.stamina_mod.comfort.ComfortEvents;
 
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -52,6 +53,7 @@ public class StaminaMod
         MinecraftForge.EVENT_BUS.register(PlayerTickHandler.class);
         PlayerSleepHandler.register();
         MinecraftForge.EVENT_BUS.register(new ModEvents());
+        MinecraftForge.EVENT_BUS.register(new ComfortEvents());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, StaminaConfig.SPEC);
     }
 

@@ -18,7 +18,7 @@ public class ModMessages {
 
     public static void register() {
         INSTANCE = NetworkRegistry.ChannelBuilder
-                .named(new ResourceLocation(StaminaMod.MODID, "messages"))
+                .named(ResourceLocation.fromNamespaceAndPath(StaminaMod.MODID, "messages"))
                 .networkProtocolVersion(() -> "1.0")
                 .clientAcceptedVersions(s -> true)
                 .serverAcceptedVersions(s -> true)
