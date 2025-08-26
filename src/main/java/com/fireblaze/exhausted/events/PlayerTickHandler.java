@@ -43,12 +43,6 @@ import static net.minecraft.world.item.ArmorMaterials.*;
 
 @Mod.EventBusSubscriber
 public class PlayerTickHandler {
-    private static final Map<UUID, Float> shortStaminaMap = new HashMap<>();
-    private static final Map<UUID, Float> longStaminaMap = new HashMap<>();
-    private static final Map<UUID, Float> maxStaminaMap = new HashMap<>();
-    private static final Map<UUID, Float> staminaExpMap = new HashMap<>();
-    private static final Map<UUID, Integer> staminaLvlMap = new HashMap<>();
-
     private static final Map<UUID, Double> lastPlayerPosX = new HashMap<>();
     private static final Map<UUID, Double> lastPlayerPosZ = new HashMap<>();
     private static final Map<UUID, BlockPos> miningPlayers = new HashMap<>();
@@ -198,7 +192,7 @@ public class PlayerTickHandler {
         if (amplifier == 2) {
             refreshEffect(player, MobEffects.BLINDNESS, 0, duration);
             refreshEffect(player, MobEffects.JUMP, 200, duration);
-            Objects.requireNonNull(player.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(Objects.requireNonNull(player.getAttribute(Attributes.JUMP_STRENGTH)).getBaseValue() - 0.5);
+            //Objects.requireNonNull(player.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(Objects.requireNonNull(player.getAttribute(Attributes.JUMP_STRENGTH)).getBaseValue() - 0.5);
         }
     }
 
