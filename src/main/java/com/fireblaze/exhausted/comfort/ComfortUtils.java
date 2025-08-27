@@ -2,6 +2,7 @@ package com.fireblaze.exhausted.comfort;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ public class ComfortUtils {
         if (!player.isCrouching()) {
             List<String> messages = new ArrayList<>();
             for (String issue : issues) {
-                messages.addAll(getMessagesForIssue(issue));
+                messages.addAll(getMessagesForIssue(player, issue));
             }
             if (!messages.isEmpty()) {
                 String random = messages.get((int)(Math.random() * messages.size()));
@@ -40,7 +41,7 @@ public class ComfortUtils {
     }
 
 
-    public static List<String> getMessagesForIssue(String issue) {
+    public static List<String> getMessagesForIssue(Player player, String issue) {
         List<String> messages = new ArrayList<>();
         switch (issue) {
             case "low_ceiling" -> messages.add("I feel cramped here");
@@ -60,9 +61,16 @@ public class ComfortUtils {
                 messages.add("I wish I had a pet");
                 messages.add("I feel lonely");
             }
-            case "no_food_stuck" -> {
+            case "no_food_stock" -> {
                 messages.add("What should I eat tomorrow?");
                 messages.add("I have no food stocked");
+            }
+            case "no_comfort_blocks" -> {
+                messages.add("A chest or furnace could be useful");
+                messages.add("Some furniture would look nice here");
+            }
+            case "no_boost_block" -> {
+                // todo idk how to make it variable with config yet
             }
             case "wet" -> {
                 messages.add("I'm getting wet");

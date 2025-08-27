@@ -75,6 +75,19 @@ public class ComfortCalculator {
             } else result.issues.add("no_food_stock");
         }
 
+        int blockCount = ComfortHelper.countComfortBlocks(level, player);
+        double blockBonus = Math.min(Settings.getComfortBonus("block_max"), blockCount * Settings.getComfortBonus("block_per"));
+        comfort += blockBonus;
+        string.append("Comfort blocks: ").append(blockCount).append(" => +").append(blockBonus).append("%\n");
+        result.issues.add("no_comfort_blocks");
+
+        if (ComfortHelper.hasBoostBlock(level, player)) {
+            double bonus = Settings.getComfortBonus("boost_block");
+            comfort += bonus;
+            string.append("Boost block present +").append(bonus).append("\n");
+            result.issues.add("no_boost_block");
+        }
+
         if (player.isInWaterOrRain()) {
             double malus = Settings.getComfortMalus("in_rain");
             comfort += malus;
@@ -108,19 +121,6 @@ public class ComfortCalculator {
             comfort += malus;
             string.append("Monsters around ").append(malus).append("\n");
             result.issues.add("monsters");
-        }
-
-        int blockCount = ComfortHelper.countComfortBlocks(level, player);
-        double blockBonus = Math.min(Settings.getComfortBonus("block_max"), blockCount * Settings.getComfortBonus("block_per"));
-        comfort += blockBonus;
-        string.append("Comfort blocks: ").append(blockCount).append(" => +").append(blockBonus).append("%\n");
-        result.issues.add("no_comfort_blocks");
-
-        if (ComfortHelper.hasBoostBlock(level, player)) {
-            double bonus = Settings.getComfortBonus("boost_block");
-            comfort += bonus;
-            string.append("Boost block present +").append(bonus).append("\n");
-            result.issues.add("no_boost_block");
         }
 
         // Optional: Debug
