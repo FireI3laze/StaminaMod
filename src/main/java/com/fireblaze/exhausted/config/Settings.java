@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class Settings {
+    private static Set<String> comfortWallBlocksBlacklist = new HashSet<>();
     private static Set<String> comfortBlocks = new HashSet<>();
     private static Set<String> comfortBlockGroups = new HashSet<>();
     private static boolean comfortAllowStorage = false;
@@ -108,13 +109,13 @@ public class Settings {
         } else {
             double m = getDifficultyMultiplier();
             return switch (type.toLowerCase()) {
-            case "leather" -> 0.015 * m;
-            case "chain" -> 0.025;
-            case "iron" -> 0.05;
-            case "gold" -> 0.05;
-            case "diamond" -> 0.1;
-            case "netherite" -> 0.125;
-            case "unknown" -> 0.15;
+            case "leather" -> 0.03 * m;
+            case "chain" -> 0.05;
+            case "iron" -> 0.1;
+            case "gold" -> 0.1;
+            case "diamond" -> 0.125;
+            case "netherite" -> 0.15;
+            case "unknown" -> 0.175;
             case "helmetaction" -> 0.0;
             case "chestplateaction" -> 1.0;
             case "leggingsaction" -> 0.5;
@@ -170,15 +171,18 @@ public class Settings {
 
     // ----- Comfort -----
     public static void loadComfortSettings() {
+        comfortWallBlocksBlacklist.clear();
+        comfortWallBlocksBlacklist.addAll(StaminaConfig.COMFORT_WALL_BLOCKS_BLACKLIST.get());
         comfortBlocks.clear();
-        comfortBlocks.addAll(StaminaConfig.COMFORT_BLOCKS.get());
-
+        comfortBlocks.addAll(StaminaConfig.COMFORT_BLOCKS_WHITELIST.get());
         comfortBlockGroups.clear();
         comfortBlockGroups.addAll(StaminaConfig.COMFORT_BLOCK_GROUPS.get());
 
         comfortAllowStorage = StaminaConfig.COMFORT_ALLOW_STORAGE_BLOCKS.get();
     }
-
+    public static Set<String> getWallBlocksBlacklist() {
+        return comfortWallBlocksBlacklist;
+    }
     public static Set<String> getComfortBlocks() {
         return comfortBlocks;
     }
@@ -260,11 +264,7 @@ public class Settings {
         return map;
     }
 
-    // ----- Global Difficulty -----
-    public static StaminaConfig.Difficulty getDifficulty() {
-        return StaminaConfig.DIFFICULTY.get();
-    }
-
+    // ----- Global Difficulty ----
     private static double getDifficultyMultiplier() {
         return switch (StaminaConfig.DIFFICULTY.get()) {
             case EASY -> 0.75;

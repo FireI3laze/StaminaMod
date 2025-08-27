@@ -20,7 +20,8 @@ public class StaminaConfig {
     public static final ForgeConfigSpec.BooleanValue KEEP_STAMINA_ON_DEATH;
 
         // === Comfort ===
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> COMFORT_BLOCKS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> COMFORT_WALL_BLOCKS_BLACKLIST;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> COMFORT_BLOCKS_WHITELIST;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> COMFORT_BLOCK_GROUPS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> DIMENSION_BOOST_BLOCKS;
     public static final ForgeConfigSpec.BooleanValue COMFORT_ALLOW_STORAGE_BLOCKS;
@@ -140,10 +141,29 @@ public class StaminaConfig {
             BUILDER.pop();
 
             BUILDER.push("Comfort");
+            BUILDER.comment("Here you can add/change blocks that are not allowed to be built a base out of");
+            COMFORT_WALL_BLOCKS_BLACKLIST = BUILDER.defineList("wallBlockBlacklist", List.of(
+                    "minecraft:stone",
+                    "minecraft:deepslate",
+                    "minecraft:gravel",
+                    "minecraft:dirt",
+                    "minecraft:tuff",
+                    "minecraft:netherrack",
+                    "minecraft:soul_sand",
+                    "minecraft:soul_soil",
+                    "minecraft:basalt",
+                    "minecraft:blackstone",
+                    "minecraft:end_stone"
+            ), obj -> obj instanceof String);
             BUILDER.comment("Here you can add/change specific blocks designed to provide comfort");
-            COMFORT_BLOCKS = BUILDER.defineList("comfortBlocks", List.of("minecraft:crafting_table"), obj -> obj instanceof String);
-            BUILDER.comment("Here you can add/change block groups or mods designed to provide comfort. E.g. with 'door', oak_door, birch_door, oak_trapdoor, (...) will work. With 'furniture', all blocks of all mods that have 'furniture' in their namae provide comfort.");
-            COMFORT_BLOCK_GROUPS = BUILDER.defineList("comfortBlockGroups", List.of("door","carpet","shelf", "glass", "potted","furniture"), obj -> obj instanceof String);
+            COMFORT_BLOCKS_WHITELIST = BUILDER.defineList("comfortBlocks", List.of(
+                    "minecraft:crafting_table",
+                    "minecraft:amethyst_block",
+                    "minecraft:budding_amethyst",
+                    "minecraft:amethyst_cluster"
+            ), obj -> obj instanceof String);
+            BUILDER.comment("Here you can add/change block groups or mods designed to provide comfort. E.g. with 'door', oak_door, birch_door, oak_trapdoor, (...) will work. With 'furniture', all blocks of all mods that have 'furniture' in their name provide comfort.");
+            COMFORT_BLOCK_GROUPS = BUILDER.defineList("comfortBlockGroups", List.of("door","carpet","shelf", "glass", "potted", "amethyst_bud", "furniture"), obj -> obj instanceof String);
             BUILDER.comment("Considers all blocks with internal storage as comfort blocks (chests, furnaces, etc.)");
             COMFORT_ALLOW_STORAGE_BLOCKS = BUILDER.define("allowStorageBlocks", true);
             BUILDER.comment("Each Dimension also has one boost block that provides additional comfort. Here you can change the boost block for the corresponding dimension");
@@ -163,8 +183,8 @@ public class StaminaConfig {
             COMFORT_BONUS_ANIMAL = defineIntComment("comfortBonusAnimal", 5, "When you have a friendly animal in your room/closer range");
             COMFORT_BONUS_FOOD = defineIntComment("comfortBonusFood", 5, "When you have food in a chest in your room/closer range");
             COMFORT_BONUS_BLOCK = defineIntComment("comfortBonusBlockMax", 30, "The max amount of comfort you can get from comfort blocks");
-            BUILDER.comment("The amount comfort a single comfort block provides");
-            COMFORT_BONUS_PER_BLOCK = defineDoubleInRange("comfortBonusPerBlock", 2.5, 0.0, 100.0);
+            BUILDER.comment("The amount comfort a single comfort block provides. Repeatedly using the same block reduces its effectiveness by 50%.");
+            COMFORT_BONUS_PER_BLOCK = defineDoubleInRange("comfortBonusPerBlock", 5, 0.0, 100.0);
             COMFORT_BONUS_BOOST_BLOCK = defineIntComment("comfortBonusBoostBlock", 10, "The comfort provided by the boost block (not stackable)");
             COMFORT_MALUS_IN_RAIN = defineIntComment("comfortMalusInRain", -50, "Comfort reduction when in rain");
             COMFORT_MALUS_HURT = defineIntComment("comfortMalusHurt", -5, "Comfort reduction when hurt");
@@ -179,7 +199,7 @@ public class StaminaConfig {
         BUILDER.pop();
 
         BUILDER.push("Advanced-Settings");
-        BUILDER.comment("For reference, the following numbers represent the medium settings.\nShort = active consumption, Long = temporary stamina cap");
+        BUILDER.comment("For reference, the following numbers represent the medium settings.\nShort = active consumption (blue bar), Long = temporary stamina cap (gray bar)");
 
         // --- Regeneration ---
         BUILDER.push("Regeneration");
@@ -253,8 +273,8 @@ public class StaminaConfig {
         ARMOR_MATERIAL_GOLD = defineDoubleInRange("goldMultiplier", 0.1, 0.0, 10.0);
         ARMOR_MATERIAL_DIAMOND = defineDoubleInRange("diamondMultiplier", 0.125, 0.0, 10.0);
         ARMOR_MATERIAL_NETHERITE = defineDoubleInRange("netheriteMultiplier", 0.15, 0.0, 10.0);
-        ARMOR_MATERIAL_UNKOWN = defineDoubleInRange("unknownMultiplier", 0.3, 0.0, 10.0);
-        BUILDER.comment("Multiplier for the corresponding armor piece, based on activity");
+        ARMOR_MATERIAL_UNKOWN = defineDoubleInRange("unknownMultiplier", 0.175, 0.0, 10.0);
+        BUILDER.comment("Multiplier for the corresponding armor piece, based on activity. Action includes activities that are mostly arm related like mining, horse or boat riding. Movement includes activities that are mostly leg related like walking, running, jumping (...)");
         ARMOR_HELMET_MULTIPLIER_ACTION = defineDoubleInRange("helmetActionMultiplier", 0.0, 0.0, 1.0);
         ARMOR_CHESTPLATE_MULTIPLIER_ACTION = defineDoubleInRange("chestplateActionMultiplier", 1.0, 0.0, 1.0);
         ARMOR_LEGGINGS_MULTIPLIER_ACTION = defineDoubleInRange("leggingsActionMultiplier", 0.5, 0.0, 1.0);

@@ -1,8 +1,10 @@
 package com.fireblaze.exhausted.comfort;
 
 import com.fireblaze.exhausted.config.Settings;
+import com.fireblaze.exhausted.config.StaminaConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -102,6 +104,8 @@ public class ComfortHelper {
 
     // === Scan-Methode ===
     public static RoomScanResults scanRoom(ServerLevel level, Player player) {
+        Settings.loadComfortSettings();
+
         int lightSum = 0;
         int lightCount = 0;
 
@@ -139,7 +143,10 @@ public class ComfortHelper {
                     lightCount++;
                 } else {
                     result.totalBlocks++;
-                    if (isCaveBlock(level, neighbor)) {
+                    ResourceLocation blockId = level.registryAccess()
+                            .registryOrThrow(Registries.BLOCK)
+                            .getKey(level.getBlockState(neighbor).getBlock());
+                    if (blockId != null && Settings.getWallBlocksBlacklist().contains(blockId.toString())) {
                         result.badBlocks++;
                         badBlocksSet.add(neighbor);
                     } else {
@@ -224,6 +231,7 @@ public class ComfortHelper {
 
     private static boolean isCaveBlock(ServerLevel level, BlockPos pos) {
         var state = level.getBlockState(pos);
+
         return state.is(Blocks.STONE) || state.is(Blocks.DEEPSLATE) || state.is(Blocks.GRAVEL) ||
                 state.is(Blocks.DIRT) || state.is(Blocks.TUFF) || state.is(Blocks.NETHERRACK) || state.is(Blocks.SOUL_SAND) ||
                 state.is(Blocks.SOUL_SOIL) || state.is(Blocks.BASALT) || state.is(Blocks.BLACKSTONE) ||
@@ -308,19 +316,32 @@ public class ComfortHelper {
 
 
     // Komfortblöcke zählen
-    public static int countComfortBlocks(ServerLevel level, Player player) {
+    public static double countComfortBlocks(ServerLevel level, Player player) {
         RoomScanResults scan = lastRoomScans.get(player);
         if (scan == null || scan.visitedPositions == null) return 0;
         Settings.loadComfortSettings();
 
-        int count = 0;
+        double count = 0;
+        Map<Block, Integer> seenBlocks = new HashMap<>();
+
         for (BlockPos pos : scan.visitedPositions) {
             BlockState state = level.getBlockState(pos);
-            if (isComfortBlock(state.getBlock())) {
-                count++;
+            Block block = state.getBlock();
+
+            if (isComfortBlock(block)) {
+                int occurrences = seenBlocks.getOrDefault(block, 0);
+
+                if (occurrences == 0) {
+                    // erstes Mal -> volle Effektivität
+                    count += 1;
+                } else {
+                    // ab dem zweiten Mal -> halbe Effektivität
+                    count += 0.5;
+                }
+
+                seenBlocks.put(block, occurrences + 1);
             }
         }
-
         return count;
     }
 

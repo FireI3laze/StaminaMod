@@ -27,6 +27,14 @@ public class ComfortCalculator {
             return result;
         }
 
+        if (Settings.getComfortBonus("walls") != 0) {
+            if (ComfortHelper.hasDecoratedWalls(level, player)) {
+                double bonus = Settings.getComfortBonus("walls");
+                comfort += bonus;
+                string.append("Has deco walls +").append(bonus).append("\n");
+            } else result.issues.add("no_deco_walls");
+        }
+
         if (Settings.getComfortBonus("ceiling") != 0) {
             if (ComfortHelper.hasCeilingHeight(level, player, 2)) {
                 double bonus = Settings.getComfortBonus("ceiling");
@@ -41,14 +49,6 @@ public class ComfortCalculator {
                 comfort += bonus;
                 string.append("Has enough space +").append(bonus).append("\n");
             } else result.issues.add("no_space");
-        }
-
-        if (Settings.getComfortBonus("walls") != 0) {
-            if (ComfortHelper.hasDecoratedWalls(level, player)) {
-                double bonus = Settings.getComfortBonus("walls");
-                comfort += bonus;
-                string.append("Has deco walls +").append(bonus).append("\n");
-            } else result.issues.add("no_deco_walls");
         }
 
         if (Settings.getComfortBonus("light") != 0) {
@@ -75,7 +75,7 @@ public class ComfortCalculator {
             } else result.issues.add("no_food_stock");
         }
 
-        int blockCount = ComfortHelper.countComfortBlocks(level, player);
+        double blockCount = ComfortHelper.countComfortBlocks(level, player);
         double blockBonus = Math.min(Settings.getComfortBonus("block_max"), blockCount * Settings.getComfortBonus("block_per"));
         comfort += blockBonus;
         string.append("Comfort blocks: ").append(blockCount).append(" => +").append(blockBonus).append("%\n");
