@@ -26,7 +26,6 @@ public class StaminaDataSyncS2CPacket {
         this.maxStamina = maxStamina;
         this.staminaExp = 9990;
         this.staminaLvl = 10;
-        System.out.println("GOOD MORNING | " + maxStamina);
     }
 
     public StaminaDataSyncS2CPacket(FriendlyByteBuf buf) {

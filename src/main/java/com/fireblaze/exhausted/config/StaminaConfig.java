@@ -15,6 +15,14 @@ public class StaminaConfig {
     public static final ForgeConfigSpec.EnumValue<Difficulty> DIFFICULTY;
     public static final ForgeConfigSpec.BooleanValue CUSTOM_SETTINGS;
 
+        // === UI ===
+        public static final ForgeConfigSpec.BooleanValue SOUND_BREATHING;
+
+        // === Sound ===
+    public static final ForgeConfigSpec.ConfigValue<Integer> UI_X_COORDINATE_STAMINA_BAR;
+    public static final ForgeConfigSpec.ConfigValue<Integer> UI_Y_COORDINATE_STAMINA_BAR;
+    public static final ForgeConfigSpec.ConfigValue<Integer> UI_WIDTH_STAMINA_BAR;
+
         // === Death Resets ===
     public static final ForgeConfigSpec.BooleanValue KEEP_LEVEL_ON_DEATH;
     public static final ForgeConfigSpec.BooleanValue KEEP_STAMINA_ON_DEATH;
@@ -45,13 +53,13 @@ public class StaminaConfig {
 
     // === Advanced Settings ===
 
-    // === Regeneration ===
+        // === Regeneration ===
     public static final ForgeConfigSpec.ConfigValue<Double> BASE_REGEN_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> BASE_REGEN_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> COMFORT_REG_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Double> FOOD_FACTOR;
 
-    // === Mining ===
+        // === Mining ===
     public static final ForgeConfigSpec.ConfigValue<Double> MINING_HAND_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> MINING_HAND_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> MINING_PICKAXE_SHORT;
@@ -66,14 +74,16 @@ public class StaminaConfig {
     public static final ForgeConfigSpec.ConfigValue<Double> MINING_SHEARS_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> MINING_UNKNOWN_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> MINING_UNKNOWN_LONG;
+    public static final ForgeConfigSpec.ConfigValue<Double> MINING_BLOCK_BREAK_SHORT;
+    public static final ForgeConfigSpec.ConfigValue<Double> MINING_BLOCK_BREAK_LONG;
 
-    // === Interact / Place ===
+        // === Interact / Place ===
     public static final ForgeConfigSpec.ConfigValue<Double> INTERACT_PLACE_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> INTERACT_PLACE_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> INTERACT_CLICK_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> INTERACT_CLICK_LONG;
 
-    // === Movement ===
+            // === Movement ===
     public static final ForgeConfigSpec.ConfigValue<Double> MOVEMENT_SPRINT_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> MOVEMENT_SPRINT_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> MOVEMENT_WALK_SHORT;
@@ -89,14 +99,15 @@ public class StaminaConfig {
     public static final ForgeConfigSpec.ConfigValue<Double> MOVEMENT_BOAT_DRIVE_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> MOVEMENT_BOAT_DRIVE_LONG;
 
-    // === Combat ===
+        // === Combat ===
     public static final ForgeConfigSpec.ConfigValue<Double> COMBAT_HITTING_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> COMBAT_HITTING_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> COMBAT_BLOCKING_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> COMBAT_BLOCKING_LONG;
     public static final ForgeConfigSpec.ConfigValue<Double> COMBAT_DAMAGE_TAKEN_SHORT;
     public static final ForgeConfigSpec.ConfigValue<Double> COMBAT_DAMAGE_TAKEN_LONG;
-    // === Combat ===
+
+        // === Combat ===
     public static final ForgeConfigSpec.ConfigValue<Double> ARMOR_MATERIAL_LEATHER;
     public static final ForgeConfigSpec.ConfigValue<Double> ARMOR_MATERIAL_CHAIN;
     public static final ForgeConfigSpec.ConfigValue<Double> ARMOR_MATERIAL_IRON;
@@ -131,6 +142,24 @@ public class StaminaConfig {
             CUSTOM_SETTINGS = BUILDER
                     .comment("If true, the custom settings below the global settings are used and override the difficulty setting here.")
                     .define("Custom Settings", false);
+            BUILDER.pop();
+
+            BUILDER.push("UI");
+            UI_X_COORDINATE_STAMINA_BAR = BUILDER
+                    .comment("0 = Center | base = 0")
+                    .define("X Coordinate of Stamina Bar", 0);
+            UI_Y_COORDINATE_STAMINA_BAR = BUILDER
+                    .comment("0 = bottom edge of the screen | base = 54 (right above armor bar)")
+                    .define("Y Coordinate of Stamina Bar", 54);
+            UI_WIDTH_STAMINA_BAR = BUILDER
+                    .comment("base = 182 (hotbar width)")
+                    .define("Width of Stamina Bar", 182);
+            BUILDER.pop();
+
+            BUILDER.push("Sounds");
+            SOUND_BREATHING = BUILDER
+                    .comment("Enable or Disable breath sound on low stamina")
+                    .define("Breath Sound", true);
             BUILDER.pop();
 
             BUILDER.push("Death-Resets");
@@ -211,20 +240,22 @@ public class StaminaConfig {
 
         // --- Mining ---
         BUILDER.push("Mining");
-        MINING_HAND_SHORT = defineDoubleInRange("handShort", 0.125, 0.0, 10.0);
-        MINING_HAND_LONG = defineDoubleInRange("handLong", 0.0125, 0.0, 10.0);
-        MINING_PICKAXE_SHORT = defineDoubleInRange("pickaxeShort", 0.07, 0.0, 10.0);
-        MINING_PICKAXE_LONG = defineDoubleInRange("pickaxeLong", 0.005, 0.0, 10.0);
-        MINING_AXE_SHORT = defineDoubleInRange("axeShort", 0.068, 0.0, 10.0);
-        MINING_AXE_LONG = defineDoubleInRange("axeLong", 0.0025, 0.0, 10.0);
-        MINING_SHOVEL_SHORT = defineDoubleInRange("shovelShort", 0.066, 0.0, 10.0);
-        MINING_SHOVEL_LONG = defineDoubleInRange("shovelLong", 0.0001, 0.0, 10.0);
-        MINING_HOE_SHORT = defineDoubleInRange("hoeShort", 0.065, 0.0, 10.0);
-        MINING_HOE_LONG = defineDoubleInRange("hoeLong", 0.0008, 0.0, 10.0);
+        MINING_HAND_SHORT = defineDoubleInRange("handShort", 0.1, 0.0, 10.0);
+        MINING_HAND_LONG = defineDoubleInRange("handLong", 0.01, 0.0, 10.0);
+        MINING_PICKAXE_SHORT = defineDoubleInRange("pickaxeShort", 0.06, 0.0, 10.0);
+        MINING_PICKAXE_LONG = defineDoubleInRange("pickaxeLong", 0.006, 0.0, 10.0);
+        MINING_AXE_SHORT = defineDoubleInRange("axeShort", 0.058, 0.0, 10.0);
+        MINING_AXE_LONG = defineDoubleInRange("axeLong", 0.0058, 0.0, 10.0);
+        MINING_SHOVEL_SHORT = defineDoubleInRange("shovelShort", 0.056, 0.0, 10.0);
+        MINING_SHOVEL_LONG = defineDoubleInRange("shovelLong", 0.0056, 0.0, 10.0);
+        MINING_HOE_SHORT = defineDoubleInRange("hoeShort", 0.055, 0.0, 10.0);
+        MINING_HOE_LONG = defineDoubleInRange("hoeLong", 0.0055, 0.0, 10.0);
         MINING_SHEARS_SHORT = defineDoubleInRange("shearsShort", 1.0, 0.0, 10.0);
         MINING_SHEARS_LONG = defineDoubleInRange("shearsLong", 1.0, 0.0, 10.0);
         MINING_UNKNOWN_SHORT = defineDoubleInRange("unknownToolShort", 0.07, 0.0, 10.0);
         MINING_UNKNOWN_LONG = defineDoubleInRange("unknownToolLong", 0.007, 0.0, 10.0);
+        MINING_BLOCK_BREAK_SHORT = defineDoubleInRange("blockBreakShort", 0.12, 0.0, 10.0);
+        MINING_BLOCK_BREAK_LONG = defineDoubleInRange("blockBreakLong", 0.012, 0.0, 10.0);
         BUILDER.pop();
 
         // --- Interact ---

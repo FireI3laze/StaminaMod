@@ -1,0 +1,20 @@
+{
+  "negative_1": {
+    "sounds": [
+      { "name": "exhausted:negative_1", "stream": false }
+    ],
+    "subtitle": "subtitles.exhausted.negative_1"
+  },
+  "negative_2": {
+    "sounds": [
+      { "name": "exhausted:negative_2", "stream": false }
+    ],
+    "subtitle": "subtitles.exhausted.negative_2"
+  },
+  "negative_3": {
+    "sounds": [
+      { "name": "exhausted:negative_3", "stream": false }
+    ],
+    "subtitle": "subtitles.exhausted.negative_3"
+  }
+}

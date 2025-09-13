@@ -176,7 +176,7 @@ public class ComfortHelper {
 
         // Blöcke hervorheben
         // highlightBlocks(level, badBlocksSet, goodBlocksSet);
-        System.out.println(result.badBlocks + " | " + (result.totalBlocks - result.badBlocks));
+        //System.out.println(result.badBlocks + " | " + (result.totalBlocks - result.badBlocks));
         result.decorated = result.totalBlocks == 0 || ((float) result.badBlocks / result.totalBlocks) <= 0.5f;
 
         // Scan-Ergebnis speichern
@@ -365,7 +365,6 @@ public class ComfortHelper {
             BlockState state = level.getBlockState(pos);
 
             if (state.is(targetBlock)) {
-                System.out.println("Boost block found: " + blockId);
                 return true;
             }
         }

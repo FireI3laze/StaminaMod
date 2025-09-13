@@ -1,5 +1,6 @@
 package com.fireblaze.exhausted.events;
 
+import com.fireblaze.exhausted.ModifierUtils;
 import com.fireblaze.exhausted.capability.StaminaProvider;
 import com.fireblaze.exhausted.comfort.ComfortProvider;
 import com.fireblaze.exhausted.comfort.ComfortUtils;
@@ -8,6 +9,9 @@ import com.fireblaze.exhausted.entity.SeatEntity;
 import com.fireblaze.exhausted.networking.ModMessages;
 import com.fireblaze.exhausted.networking.packet.StaminaDataSyncS2CPacket;
 import com.fireblaze.exhausted.comfort.ComfortCalculator;
+import com.fireblaze.exhausted.Sounds.PlaySoundPacket;
+import com.fireblaze.exhausted.networking.packet.StepUpS2CPacket;
+import com.fireblaze.exhausted.stepUp.StepUpPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,11 +21,14 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.AbstractMinecart;
 import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.food.FoodData;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.state.BlockState;
@@ -31,6 +38,7 @@ import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -47,6 +55,7 @@ public class PlayerTickHandler {
     private static final Map<UUID, Double> lastPlayerPosZ = new HashMap<>();
     private static final Map<UUID, BlockPos> miningPlayers = new HashMap<>();
     private static final Map<UUID, Integer> tickCounter = new HashMap<>();
+    private static int currentTick = 0;
     public static final int tickMultiplier = 5;
 
     @SubscribeEvent
@@ -143,23 +152,74 @@ public class PlayerTickHandler {
                 }
             }
 
-            // Potion-Effekte & Synchronisation (alle 5 Ticks)
+            // Potion-Effekte
             float shortStam = stamina.getShortStamina();
             float longStam = stamina.getLongStamina();
 
             // Negative / Positive Effects
-            if (shortStam <= Settings.getNegativeEffect3Threshold())
-                applyNegativeEffects(player, 2);
-            else if (shortStam <= Settings.getNegativeEffect2Threshold())
-                applyNegativeEffects(player, 1);
-            else if (shortStam <= Settings.getNegativeEffect1Threshold())
-                applyNegativeEffects(player, 0);
-            else if (shortStam >= Settings.getPositiveEffectThreshold())
-                applyPositiveEffects(player, 0);
+            // Tick-Loop:
+            int newThreshold = -1;
+            AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
 
+            // Gültige UUIDs für jeden Modifier
+            UUID SPEED_MALUS_3_UUID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+            UUID SPEED_MALUS_2_UUID = UUID.fromString("22222222-2222-2222-2222-222222222222");
+            UUID SPEED_MALUS_1_UUID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+            UUID SPEED_BONUS_1_UUID = UUID.fromString("44444444-4444-4444-4444-444444444444");
+
+            // Prüfen, ob Modifier schon vorhanden sind
+            boolean hasMalus3 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_MALUS_3_UUID));
+            boolean hasMalus2 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_MALUS_2_UUID));
+            boolean hasMalus1 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_MALUS_1_UUID));
+            boolean hasBonus1 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_BONUS_1_UUID));
+
+            int hungerDrainInterval = 40;
+            currentTick++;
+
+            if (shortStam <= Settings.getNegativeEffect3Threshold()) {
+                newThreshold = 2;
+                hungerSimulation(player, hungerDrainInterval);
+                applyNegativeEffects(player);
+                if (!hasMalus3) {
+                    ModifierUtils.removeAllCustomModifiers(player);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 3", -0.45, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_3_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 3", -0.75, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                }
+            } else if (shortStam <= Settings.getNegativeEffect2Threshold()) {
+                newThreshold = 1;
+                hungerSimulation(player, hungerDrainInterval);
+                if (!hasMalus2) {
+                    ModifierUtils.removeAllCustomModifiers(player);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 2", -0.3, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_2_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 2", -0.5, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                }
+            } else if (shortStam <= Settings.getNegativeEffect1Threshold()) {
+                newThreshold = 0;
+                if (!hasMalus1) {
+                    ModifierUtils.removeAllCustomModifiers(player);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 1", -0.15, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_1_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 1", -0.25, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                }
+            } else if (shortStam >= Settings.getPositiveEffectThreshold()) {
+                if (!hasBonus1) {
+                    ModifierUtils.removeAllCustomModifiers(player);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed bonus 1", 0.2, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_BONUS_1_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage bonus 1", 3, AttributeModifier.Operation.ADDITION);
+                }
+            } else {
+                ModifierUtils.removeAllCustomModifiers(player);
+            }
+
+            ModMessages.sendToPlayer(new PlaySoundPacket(newThreshold), (ServerPlayer) player);
             stamina.tick(player, tickMultiplier);
 
-            // Stamina Synchronisation
+            /*
+            ModMessages.sendToPlayer(new StepUpS2CPacket(1.0f), (ServerPlayer) player);
+            stamina.tick(player, tickMultiplier);
+
+            player.setMaxUpStep(1.0f);
+            */
+
             ModMessages.sendToPlayer(new StaminaDataSyncS2CPacket(
                     shortStam, longStam, stamina.getLongStaminaCap(), stamina.getStaminaExp(), stamina.getStaminaLvl()
             ), (ServerPlayer) player);
@@ -182,18 +242,9 @@ public class PlayerTickHandler {
         return distanceMoved > 0.001 && !player.isSprinting();
     }
 
-    public static void applyNegativeEffects(Player player, int amplifier) {
+    public static void applyNegativeEffects(Player player) {
         int duration = 100;
-        refreshEffect(player, MobEffects.MOVEMENT_SLOWDOWN, amplifier, duration);
-        refreshEffect(player, MobEffects.DIG_SLOWDOWN, amplifier, duration);
-        refreshEffect(player, MobEffects.WEAKNESS, amplifier, duration);
-
-        if (amplifier >= 1) refreshEffect(player, MobEffects.HUNGER, 0, duration);
-        if (amplifier == 2) {
-            refreshEffect(player, MobEffects.BLINDNESS, 0, duration);
-            refreshEffect(player, MobEffects.JUMP, 200, duration);
-            //Objects.requireNonNull(player.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(Objects.requireNonNull(player.getAttribute(Attributes.JUMP_STRENGTH)).getBaseValue() - 0.5);
-        }
+        refreshEffect(player, MobEffects.BLINDNESS, 0, duration);
     }
 
     public static void applyPositiveEffects(Player player, int amplifier) {
@@ -207,6 +258,17 @@ public class PlayerTickHandler {
         MobEffectInstance current = player.getEffect(effect);
         if (current == null || current.getDuration() <= 40 || current.getAmplifier() != amplifier) {
             player.addEffect(new MobEffectInstance(effect, duration, amplifier, false, false));
+        }
+    }
+
+    private static void hungerSimulation(Player player, int hungerDrainInterval) {
+        if (currentTick % hungerDrainInterval == 0) {
+            FoodData foodData = player.getFoodData();
+            if (foodData.getSaturationLevel() > 0) {
+                foodData.setSaturation(Math.max(foodData.getSaturationLevel() - 1, 0));
+            } else {
+                foodData.setFoodLevel(Math.max(foodData.getFoodLevel() - 1, 0));
+            }
         }
     }
 
@@ -286,7 +348,6 @@ public class PlayerTickHandler {
 
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
             stamina.consume((float) Settings.getCombatCost("hit", true), (float) Settings.getCombatCost("hit", false), getArmorStaminaMultiplier(player, "action"), player);
-            System.out.println("hit enemy and consumed " + Settings.getCombatCost("hit", true) + " Stamina");
         });
     }
     @SubscribeEvent
@@ -295,7 +356,6 @@ public class PlayerTickHandler {
             float damage = event.getAmount();
 
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
-                // stamina.consume(damage, 0.1f * damage, 1, player);
                 stamina.consume((float) Settings.getCombatCost("hit", true) * damage, (float) Settings.getCombatCost("hit", false) * damage, 0, player);
             });
         }
@@ -309,7 +369,6 @@ public class PlayerTickHandler {
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
             BlockState blockState = event.getLevel().getBlockState(event.getPos());
             if (!blockState.isAir()) {
-                // stamina.consume(0.175f, 0.015f, 0, player);
                 stamina.consume((float) Settings.getInteractCost("click", true), (float) Settings.getInteractCost("click", false), getArmorStaminaMultiplier(player, "action"), player);
             }
         });
@@ -326,6 +385,10 @@ public class PlayerTickHandler {
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
         miningPlayers.remove(event.getPlayer().getUUID());
+        Player player = event.getPlayer();
+        player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+            stamina.consume((float) Settings.getMiningCost("break", true), (float) Settings.getMiningCost("break", false), getArmorStaminaMultiplier(player, "action"), player);
+        });
     }
 
     @SubscribeEvent
@@ -370,7 +433,6 @@ public class PlayerTickHandler {
         ItemStack stack = event.getItem();
         Item item = stack.getItem();
 
-        // Prüfen, ob es ein Nahrungsmittel ist
         if (item.isEdible()) {
             FoodProperties food = item.getFoodProperties();
 

@@ -11,10 +11,19 @@ public class Settings {
     private static Set<String> comfortBlockGroups = new HashSet<>();
     private static boolean comfortAllowStorage = false;
 
+    // ----- UI -----
+    public static int getUiScalings(String uiPart) {
+        return switch (uiPart.toLowerCase()) {
+            case "x" -> StaminaConfig.UI_X_COORDINATE_STAMINA_BAR.get();
+            case "y" -> StaminaConfig.UI_Y_COORDINATE_STAMINA_BAR.get();
+            case "width" -> StaminaConfig.UI_WIDTH_STAMINA_BAR.get();
+            default -> 0;
+        };
+    }
+
     // ----- Mining -----
     public static double getMiningCost(String tool, boolean isShort) {
         if (StaminaConfig.CUSTOM_SETTINGS.get()) {
-            // Custom Settings: Config-Werte 1:1
             return switch (tool.toLowerCase()) {
                 case "hand" -> isShort ? StaminaConfig.MINING_HAND_SHORT.get() : StaminaConfig.MINING_HAND_LONG.get();
                 case "pickaxe" -> isShort ? StaminaConfig.MINING_PICKAXE_SHORT.get() : StaminaConfig.MINING_PICKAXE_LONG.get();
@@ -22,18 +31,20 @@ public class Settings {
                 case "shovel" -> isShort ? StaminaConfig.MINING_SHOVEL_SHORT.get() : StaminaConfig.MINING_SHOVEL_LONG.get();
                 case "hoe" -> isShort ? StaminaConfig.MINING_HOE_SHORT.get() : StaminaConfig.MINING_HOE_LONG.get();
                 case "shears" -> isShort ? StaminaConfig.MINING_SHEARS_SHORT.get() : StaminaConfig.MINING_SHEARS_LONG.get();
+                case "break" -> isShort ? StaminaConfig.MINING_BLOCK_BREAK_SHORT.get() : StaminaConfig.MINING_BLOCK_BREAK_LONG.get();
                 default -> isShort ? StaminaConfig.MINING_UNKNOWN_SHORT.get() : StaminaConfig.MINING_UNKNOWN_LONG.get();
             };
         } else {
             // Custom Settings aus: Base-Werte * Difficulty-Multiplikator
             double m = getDifficultyMultiplier();
             return switch (tool.toLowerCase()) {
-                case "hand" -> isShort ? 0.125 * m : 0.0125 * m;
-                case "pickaxe" -> isShort ? 0.07 * m : 0.005 * m;
-                case "axe" -> isShort ? 0.068 * m : 0.0025 * m;
-                case "shovel" -> isShort ? 0.066 * m : 0.0001 * m;
-                case "hoe" -> isShort ? 0.065 * m : 0.0008 * m;
-                case "shears" -> isShort ? 1.0 * m : 1.0 * m;
+                case "hand" -> isShort ? 0.1 * m : 0.01 * m;
+                case "pickaxe" -> isShort ? 0.06 * m : 0.006 * m;
+                case "axe" -> isShort ? 0.058 * m : 0.0058 * m;
+                case "shovel" -> isShort ? 0.056 * m : 0.0056 * m;
+                case "hoe" -> isShort ? 0.055 * m : 0.0055 * m;
+                case "shears" -> isShort ? m : 0.1 * m;
+                case "break" -> isShort ? 0.12 * m : 0.012 * m;
                 default -> isShort ? 0.07 * m : 0.007 * m;
             };
         }
@@ -248,9 +259,8 @@ public class Settings {
         return StaminaConfig.NEGATIVE_EFFECT_2_THRESHOLD.get();
     }
 
-    public static double getNegativeEffect3Threshold() {
-        return StaminaConfig.NEGATIVE_EFFECT_3_THRESHOLD.get();
-    }
+    public static double getNegativeEffect3Threshold() {return StaminaConfig.NEGATIVE_EFFECT_3_THRESHOLD.get();}
+    public static boolean getBreathVolume() {return StaminaConfig.SOUND_BREATHING.get();}
 
     // ----- Dimension Boost Blocks -----
     public static Map<String, String> getDimensionBoostBlocks() {

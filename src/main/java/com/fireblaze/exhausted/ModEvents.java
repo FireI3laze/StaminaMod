@@ -5,6 +5,7 @@ import com.fireblaze.exhausted.capability.StaminaProvider;
 import com.fireblaze.exhausted.comfort.ComfortCalculator;
 import com.fireblaze.exhausted.comfort.ComfortProvider;
 import com.fireblaze.exhausted.comfort.ComfortUtils;
+import com.fireblaze.exhausted.commands.StaminaCommands;
 import com.fireblaze.exhausted.config.Settings;
 import com.fireblaze.exhausted.config.StaminaConfig;
 import com.fireblaze.exhausted.entity.ModEntities;
@@ -22,6 +23,7 @@ import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -31,16 +33,20 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.*;
 
-@Mod.EventBusSubscriber(modid = StaminaMod.MODID)
+@Mod.EventBusSubscriber(modid = Exhausted.MODID)
 public class ModEvents {
     @SubscribeEvent
     public static void onAttachCapabilitiesPlayer(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Player player) {
-            // Verhindert Doppel-Registrierung
             if (!player.getCapability(StaminaProvider.PLAYER_STAMINA).isPresent()) {
-                event.addCapability(ResourceLocation.fromNamespaceAndPath(StaminaMod.MODID, "properties"), new StaminaProvider());
+                event.addCapability(ResourceLocation.fromNamespaceAndPath(Exhausted.MODID, "properties"), new StaminaProvider());
             }
         }
+    }
+
+    @SubscribeEvent
+    public static void onRegisterCommands(RegisterCommandsEvent event) {
+        StaminaCommands.register(event.getDispatcher());
     }
 
     @SubscribeEvent
@@ -54,24 +60,16 @@ public class ModEvents {
                 boolean keepStamina = StaminaConfig.KEEP_STAMINA_ON_DEATH.get();
 
                 if (keepLevel && keepStamina) {
-                    // Alles übernehmen
                     newStore.copyFrom(oldStore);
                 } else if (keepLevel) {
-                    // Nur Level & Exp übernehmen
                     newStore.setStaminaLvl(oldStore.getStaminaLvl());
                     newStore.setStaminaExp(oldStore.getStaminaExp());
                 } else if (keepStamina) {
-                    // Alles außer Level & Exp übernehmen
                     newStore.setShortStamina(oldStore.getShortStamina());
                     newStore.setLongStamina(oldStore.getLongStamina());
-                    // Level & Exp bleiben unverändert
-                } else {
-                    // Nichts übernehmen, alles bleibt default
                 }
-
             });
         });
-
         event.getOriginal().invalidateCaps();
     }
 

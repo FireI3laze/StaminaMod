@@ -3,8 +3,10 @@ package com.fireblaze.exhausted;
 import com.fireblaze.exhausted.commands.StaminaCommands;
 import com.fireblaze.exhausted.config.StaminaConfig;
 import com.fireblaze.exhausted.items.ModItems;
+import com.fireblaze.exhausted.items.StepUpBootsHandler;
 import com.fireblaze.exhausted.networking.ModMessages;
 import com.fireblaze.exhausted.entity.ModEntities;
+import com.fireblaze.exhausted.Sounds.ModSounds;
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -29,15 +31,15 @@ import com.fireblaze.exhausted.comfort.ComfortEvents;
 
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod(StaminaMod.MODID)
-public class StaminaMod
+@Mod(Exhausted.MODID)
+public class Exhausted
 {
     // Define mod id in a common place for everything to reference
     public static final String MODID = "exhausted";
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public StaminaMod(FMLJavaModLoadingContext context)
+    public Exhausted(FMLJavaModLoadingContext context)
     {
         IEventBus modEventBus = context.getModEventBus();
 
@@ -57,7 +59,10 @@ public class StaminaMod
         MinecraftForge.EVENT_BUS.register(new ModEvents());
         MinecraftForge.EVENT_BUS.register(new ComfortEvents());
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, StaminaConfig.SPEC);
+        ModSounds.register(FMLJavaModLoadingContext.get().getModEventBus());
         ModItems.register(modEventBus);
+        StepUpBootsHandler.register();
+        ModAttributes.register(modEventBus);
     }
 
     @Mod.EventBusSubscriber(modid = "stamina_mod")
@@ -82,7 +87,7 @@ public class StaminaMod
     private void addCreative(BuildCreativeModeTabContentsEvent event)
     {
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
-            event.accept(ModItems.STEPUP_BOOTS);
+            event.accept(ModItems.HIKING_BOOTS);
         }
     }
 

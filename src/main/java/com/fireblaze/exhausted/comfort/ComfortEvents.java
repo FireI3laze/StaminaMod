@@ -8,10 +8,10 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.resources.ResourceLocation;
-import com.fireblaze.exhausted.StaminaMod;
+import com.fireblaze.exhausted.Exhausted;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = StaminaMod.MODID)
+@Mod.EventBusSubscriber(modid = Exhausted.MODID)
 public class ComfortEvents {
 
     @SubscribeEvent
@@ -25,7 +25,7 @@ public class ComfortEvents {
         if (event.getObject() instanceof Player player) {
             if (!player.getCapability(ComfortProvider.COMFORT_CAP).isPresent()) {
                 event.addCapability(
-                        ResourceLocation.fromNamespaceAndPath(StaminaMod.MODID, "comfort"),
+                        ResourceLocation.fromNamespaceAndPath(Exhausted.MODID, "comfort"),
                         new ComfortProvider()
                 );
                 //System.out.println("Attaching ComfortCapability to player");

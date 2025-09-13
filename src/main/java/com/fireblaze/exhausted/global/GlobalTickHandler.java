@@ -1,11 +1,11 @@
 package com.fireblaze.exhausted.global;
 
-import com.fireblaze.exhausted.StaminaMod;
+import com.fireblaze.exhausted.Exhausted;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = StaminaMod.MODID)
+@Mod.EventBusSubscriber(modid = Exhausted.MODID)
 public class GlobalTickHandler {
 
     @SubscribeEvent

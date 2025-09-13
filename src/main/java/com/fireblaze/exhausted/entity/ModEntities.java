@@ -1,6 +1,6 @@
 package com.fireblaze.exhausted.entity;
 
-import com.fireblaze.exhausted.StaminaMod;
+import com.fireblaze.exhausted.Exhausted;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -10,7 +10,7 @@ import net.minecraftforge.registries.RegistryObject;
 
 public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES =
-            DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, StaminaMod.MODID);
+            DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, Exhausted.MODID);
 
     /*
     public static final RegistryObject<EntityType<SeatEntity>> SEAT = ENTITIES.register(
@@ -27,6 +27,6 @@ public class ModEntities {
                             .clientTrackingRange(64)   // damit Mount/Despawn sauber ankommen
                             .updateInterval(1)
 
-                            .build(ResourceLocation.fromNamespaceAndPath(StaminaMod.MODID, "seat").toString())
+                            .build(ResourceLocation.fromNamespaceAndPath(Exhausted.MODID, "seat").toString())
             );
 }

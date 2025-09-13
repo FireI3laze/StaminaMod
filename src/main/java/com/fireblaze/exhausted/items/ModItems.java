@@ -7,13 +7,13 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.eventbus.api.IEventBus;
-import com.fireblaze.exhausted.StaminaMod;
+import com.fireblaze.exhausted.Exhausted;
 
 public class ModItems {
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, StaminaMod.MODID);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Exhausted.MODID);
 
-    public static final RegistryObject<Item> STEPUP_BOOTS = ITEMS.register("stepup_boots",
-            () -> new StepUpBoots(ArmorMaterials.LEATHER, ArmorItem.Type.BOOTS,
+    public static final RegistryObject<Item> HIKING_BOOTS = ITEMS.register("hiking_boots",
+            () -> new HikingBoots(ArmorMaterials.LEATHER, ArmorItem.Type.BOOTS,
                     new Item.Properties()));
 
     public static void register(IEventBus modEventBus) {

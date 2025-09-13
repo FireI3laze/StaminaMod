@@ -1,9 +1,10 @@
 package com.fireblaze.exhausted.events;
 
-import com.fireblaze.exhausted.StaminaMod;
+import com.fireblaze.exhausted.Exhausted;
 import com.fireblaze.exhausted.client.ClientStaminaData;
 import com.fireblaze.exhausted.entity.ModEntities;
 import com.fireblaze.exhausted.entity.client.SeatRenderer;
+import com.fireblaze.exhausted.config.Settings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;
@@ -14,7 +15,7 @@ import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = StaminaMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid = Exhausted.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ClientEvents {
 
     @SubscribeEvent
@@ -35,13 +36,13 @@ public class ClientEvents {
         int height = mc.getWindow().getGuiScaledHeight();
 
         // === Neue Breite = Hotbar-Breite ===
-        int hotbarWidth = 182; // Vanilla Hotbar Standardbreite
+        int hotbarWidth = Settings.getUiScalings("width"); // Vanilla Hotbar Standardbreite
         int barWidth = hotbarWidth;
 
         int barHeight = 3;
         int cornerRadius = 6; // optische Orientierung
-        int x = (width - barWidth) / 2; // horizontal zentriert wie Hotbar
-        int y = height - 54; // bleibt unverändert
+        int x = ((width - barWidth) / 2) +  Settings.getUiScalings("x"); // horizontal zentriert wie Hotbar
+        int y = height + ( Settings.getUiScalings("y") * -1); // bleibt unverändert
 
         // Werte holen
         float maxStamina = ClientStaminaData.getPlayerMaxStamina();
@@ -138,7 +139,7 @@ public class ClientEvents {
     }
 
 
-    @Mod.EventBusSubscriber(modid = StaminaMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid = Exhausted.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     public static class ClientModBusEvents {
         @SubscribeEvent
         public static void onKeyRegister(RegisterKeyMappingsEvent event) {
