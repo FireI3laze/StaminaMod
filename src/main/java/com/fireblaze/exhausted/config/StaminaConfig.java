@@ -16,12 +16,13 @@ public class StaminaConfig {
     public static final ForgeConfigSpec.BooleanValue CUSTOM_SETTINGS;
 
         // === UI ===
-        public static final ForgeConfigSpec.BooleanValue SOUND_BREATHING;
-
-        // === Sound ===
     public static final ForgeConfigSpec.ConfigValue<Integer> UI_X_COORDINATE_STAMINA_BAR;
     public static final ForgeConfigSpec.ConfigValue<Integer> UI_Y_COORDINATE_STAMINA_BAR;
     public static final ForgeConfigSpec.ConfigValue<Integer> UI_WIDTH_STAMINA_BAR;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> UI_HIDE_STAMINA_BAR;
+
+        // === Sound ===
+    public static final ForgeConfigSpec.BooleanValue SOUND_BREATHING;
 
         // === Death Resets ===
     public static final ForgeConfigSpec.BooleanValue KEEP_LEVEL_ON_DEATH;
@@ -154,12 +155,15 @@ public class StaminaConfig {
             UI_WIDTH_STAMINA_BAR = BUILDER
                     .comment("base = 182 (hotbar width)")
                     .define("Width of Stamina Bar", 182);
+            UI_HIDE_STAMINA_BAR = BUILDER
+                    .comment("Enable or disable stamina bar fading out at 90%+ stamina")
+                    .define("Allow Hide Stamina Bar", true);
             BUILDER.pop();
 
             BUILDER.push("Sounds");
             SOUND_BREATHING = BUILDER
-                    .comment("Enable or Disable breath sound on low stamina")
-                    .define("Breath Sound", true);
+                    .comment("Enable or disable breath sound on low stamina")
+                    .define("Allow Breath Sound", true);
             BUILDER.pop();
 
             BUILDER.push("Death-Resets");
@@ -233,29 +237,29 @@ public class StaminaConfig {
         // --- Regeneration ---
         BUILDER.push("Regeneration");
         BASE_REGEN_SHORT = defineDoubleInRange("baseRegenShort", 0.0002, 0.0, 1.0, "Always active per tick");
-        BASE_REGEN_LONG = defineDoubleInRange("baseRegenLong", 0.0015, 0.0, 1.0, "Active while sitting per tick");
+        BASE_REGEN_LONG = defineDoubleInRange("baseRegenLong", 0.0017, 0.0, 1.0, "Active while sitting per tick");
         COMFORT_REG_MULTIPLIER = defineDoubleInRange("comfortRegMultiplier", 0.0325, 0.0, 10.0, "Multiplier for comfort");
         FOOD_FACTOR = defineDoubleInRange("foodFactor", 0.075, 0.0, 10.0, "Multiplies with nutrition+saturation");
         BUILDER.pop();
 
         // --- Mining ---
         BUILDER.push("Mining");
-        MINING_HAND_SHORT = defineDoubleInRange("handShort", 0.1, 0.0, 10.0);
+        MINING_HAND_SHORT = defineDoubleInRange("handShort", 0.125, 0.0, 10.0);
         MINING_HAND_LONG = defineDoubleInRange("handLong", 0.01, 0.0, 10.0);
-        MINING_PICKAXE_SHORT = defineDoubleInRange("pickaxeShort", 0.06, 0.0, 10.0);
-        MINING_PICKAXE_LONG = defineDoubleInRange("pickaxeLong", 0.006, 0.0, 10.0);
-        MINING_AXE_SHORT = defineDoubleInRange("axeShort", 0.058, 0.0, 10.0);
-        MINING_AXE_LONG = defineDoubleInRange("axeLong", 0.0058, 0.0, 10.0);
-        MINING_SHOVEL_SHORT = defineDoubleInRange("shovelShort", 0.056, 0.0, 10.0);
-        MINING_SHOVEL_LONG = defineDoubleInRange("shovelLong", 0.0056, 0.0, 10.0);
-        MINING_HOE_SHORT = defineDoubleInRange("hoeShort", 0.055, 0.0, 10.0);
-        MINING_HOE_LONG = defineDoubleInRange("hoeLong", 0.0055, 0.0, 10.0);
+        MINING_PICKAXE_SHORT = defineDoubleInRange("pickaxeShort", 0.07, 0.0, 10.0);
+        MINING_PICKAXE_LONG = defineDoubleInRange("pickaxeLong", 0.005, 0.0, 10.0);
+        MINING_AXE_SHORT = defineDoubleInRange("axeShort", 0.068, 0.0, 10.0);
+        MINING_AXE_LONG = defineDoubleInRange("axeLong", 0.004, 0.0, 10.0);
+        MINING_SHOVEL_SHORT = defineDoubleInRange("shovelShort", 0.066, 0.0, 10.0);
+        MINING_SHOVEL_LONG = defineDoubleInRange("shovelLong", 0.0036, 0.0, 10.0);
+        MINING_HOE_SHORT = defineDoubleInRange("hoeShort", 0.065, 0.0, 10.0);
+        MINING_HOE_LONG = defineDoubleInRange("hoeLong", 0.0034, 0.0, 10.0);
         MINING_SHEARS_SHORT = defineDoubleInRange("shearsShort", 1.0, 0.0, 10.0);
         MINING_SHEARS_LONG = defineDoubleInRange("shearsLong", 1.0, 0.0, 10.0);
         MINING_UNKNOWN_SHORT = defineDoubleInRange("unknownToolShort", 0.07, 0.0, 10.0);
-        MINING_UNKNOWN_LONG = defineDoubleInRange("unknownToolLong", 0.007, 0.0, 10.0);
-        MINING_BLOCK_BREAK_SHORT = defineDoubleInRange("blockBreakShort", 0.12, 0.0, 10.0);
-        MINING_BLOCK_BREAK_LONG = defineDoubleInRange("blockBreakLong", 0.012, 0.0, 10.0);
+        MINING_UNKNOWN_LONG = defineDoubleInRange("unknownToolLong", 0.005, 0.0, 10.0);
+        MINING_BLOCK_BREAK_SHORT = defineDoubleInRange("blockBreakShort", 0.03, 0.0, 10.0);
+        MINING_BLOCK_BREAK_LONG = defineDoubleInRange("blockBreakLong", 0.001, 0.0, 10.0);
         BUILDER.pop();
 
         // --- Interact ---
@@ -269,7 +273,7 @@ public class StaminaConfig {
         // --- Movement ---
         BUILDER.push("Movement");
         MOVEMENT_SPRINT_SHORT = defineDoubleInRange("sprintShort", 0.05, 0.0, 10.0);
-        MOVEMENT_SPRINT_LONG = defineDoubleInRange("sprintLong", 0.002, 0.0, 10.0);
+        MOVEMENT_SPRINT_LONG = defineDoubleInRange("sprintLong", 0.0018, 0.0, 10.0);
         MOVEMENT_WALK_SHORT = defineDoubleInRange("walkShort", 0.0075, 0.0, 10.0);
         MOVEMENT_WALK_LONG = defineDoubleInRange("walkLong", 0.0005, 0.0, 10.0);
         MOVEMENT_SWIM_SHORT = defineDoubleInRange("swimShort", 0.0075, 0.0, 10.0);
@@ -277,7 +281,7 @@ public class StaminaConfig {
         MOVEMENT_CROUCH_SHORT = defineDoubleInRange("crouchShort", 0.0075, 0.0, 10.0);
         MOVEMENT_CROUCH_LONG = defineDoubleInRange("crouchLong", 0.001, 0.0, 10.0);
         MOVEMENT_JUMP_SHORT = defineDoubleInRange("jumpShort", 0.125, 0.0, 10.0);
-        MOVEMENT_JUMP_LONG = defineDoubleInRange("jumpLong", 0.005, 0.0, 10.0);
+        MOVEMENT_JUMP_LONG = defineDoubleInRange("jumpLong", 0.008, 0.0, 10.0);
         MOVEMENT_HORSE_RIDE_SHORT = defineDoubleInRange("horseRideShort", 0.01, 0.0, 10.0);
         MOVEMENT_HORSE_RIDE_LONG = defineDoubleInRange("horseRideLong", 0.0009, 0.0, 10.0);
         MOVEMENT_BOAT_DRIVE_SHORT = defineDoubleInRange("boatDriveShort", 0.018, 0.0, 10.0);

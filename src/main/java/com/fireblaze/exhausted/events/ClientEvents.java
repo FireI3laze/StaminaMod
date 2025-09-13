@@ -23,6 +23,9 @@ public class ClientEvents {
         event.registerEntityRenderer(ModEntities.SEAT.get(), SeatRenderer::new);
     }
 
+    private static long fadeStartTime = -1; // Timestamp, wann die Stamina > 90% überschritten wurde
+    private static boolean fadingOut = false; // true = ausblenden, false = einblenden
+
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
         if (!event.getOverlay().id().equals(VanillaGuiOverlay.EXPERIENCE_BAR.id())) return;
@@ -53,13 +56,48 @@ public class ClientEvents {
         int longFill = (int) (barWidth * (longStamina / maxStamina));
         int shortFill = (int) (barWidth * (shortStamina / maxStamina));
 
+        float threshold = 0.9f;
+        float fadeDuration = 1000f; // 1 Sekunde
+
+        float normalized = shortStamina / maxStamina;
+        long currentTime = System.currentTimeMillis();
+
+        // Starte Fading nur, wenn Richtung wechselt
+        if (normalized >= threshold && Settings.getAllowFading()) {
+            if (!fadingOut) {
+                fadingOut = true;
+                fadeStartTime = currentTime;
+            }
+        } else {
+            if (fadingOut || fadeStartTime < 0) {
+                fadingOut = false;
+                fadeStartTime = currentTime;
+            }
+        }
+
+        // Berechne alphaFactor
+        float alphaFactor = 1f;
+        if (fadeStartTime >= 0) {
+            float elapsed = (currentTime - fadeStartTime) / fadeDuration;
+            elapsed = Math.min(elapsed, 1f);
+            alphaFactor = fadingOut ? 1f - elapsed : elapsed;
+        }
+
+
+
+        int longColor = ((int)(255 * alphaFactor) << 24) | (0x999999 & 0x00FFFFFF); // Graue Basis
+        int shortTopColor = ((int)(255 * alphaFactor) << 24) | (0x4A90E2 & 0x00FFFFFF); // Hellblau oben
+        int shortBottomColor = ((int)(255 * alphaFactor) << 24) | (0x3366FF & 0x00FFFFFF); // Dunkelblau unten
+        int borderColor = ((int) (255 * alphaFactor) << 24); // Schwarz + Alpha
+
+
         // Debuff Threshold als Breite in Pixel
         int debuffThreshold = 15;
         int debuffWidth = (int) (barWidth * (debuffThreshold / maxStamina));
 
         // --- 1) Füllungen ---
-        drawRoundedRectPartial(graphics, x, y, longFill, barHeight, cornerRadius, 0x99CCCCCC);
-        drawRoundedRectPartialGradient(graphics, x, y, shortFill, barHeight, cornerRadius, 0xFF4A90E2, 0xFF3366FF);
+        drawRoundedRectPartial(graphics, x, y, longFill, barHeight, cornerRadius, longColor);
+        drawRoundedRectPartialGradient(graphics, x, y, shortFill, barHeight, cornerRadius, shortTopColor, shortBottomColor);
 
         if (shortStamina <= debuffThreshold) {
             int redDrawWidth = Math.min(debuffWidth, shortFill);
@@ -67,7 +105,7 @@ public class ClientEvents {
         }
 
         // --- 2) Schwarzer Rand ---
-        drawBorder(graphics, x, y, barWidth, barHeight, 1, 0xFF000000);
+        drawBorder(graphics, x, y, barWidth, barHeight, 1, borderColor);
     }
 
     /**

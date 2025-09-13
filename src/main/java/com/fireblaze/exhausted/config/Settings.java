@@ -21,6 +21,10 @@ public class Settings {
         };
     }
 
+    public static boolean getAllowFading() {
+        return StaminaConfig.UI_HIDE_STAMINA_BAR.get();
+    }
+
     // ----- Mining -----
     public static double getMiningCost(String tool, boolean isShort) {
         if (StaminaConfig.CUSTOM_SETTINGS.get()) {
@@ -38,14 +42,14 @@ public class Settings {
             // Custom Settings aus: Base-Werte * Difficulty-Multiplikator
             double m = getDifficultyMultiplier();
             return switch (tool.toLowerCase()) {
-                case "hand" -> isShort ? 0.1 * m : 0.01 * m;
-                case "pickaxe" -> isShort ? 0.06 * m : 0.006 * m;
-                case "axe" -> isShort ? 0.058 * m : 0.0058 * m;
-                case "shovel" -> isShort ? 0.056 * m : 0.0056 * m;
-                case "hoe" -> isShort ? 0.055 * m : 0.0055 * m;
+                case "hand" -> isShort ? 0.125 * m : 0.01 * m;
+                case "pickaxe" -> isShort ? 0.07 * m : 0.005 * m;
+                case "axe" -> isShort ? 0.068 * m : 0.004 * m;
+                case "shovel" -> isShort ? 0.066 * m : 0.0036 * m;
+                case "hoe" -> isShort ? 0.065 * m : 0.0034 * m;
                 case "shears" -> isShort ? m : 0.1 * m;
-                case "break" -> isShort ? 0.12 * m : 0.012 * m;
-                default -> isShort ? 0.07 * m : 0.007 * m;
+                case "break" -> isShort ? 0.03 * m : 0.001 * m;
+                default -> isShort ? 0.07 * m : 0.005 * m;
             };
         }
     }
@@ -66,7 +70,7 @@ public class Settings {
         } else {
             double m = getDifficultyMultiplier();
             return switch (type.toLowerCase()) {
-                case "sprint" -> isShort ? 0.05 * m : 0.002 * m;
+                case "sprint" -> isShort ? 0.05 * m : 0.0018 * m;
                 case "walk" -> isShort ? 0.0075 * m : 0.001 * m;
                 case "swim" -> isShort ? 0.0075 * m : 0.001 * m;
                 case "crouch" -> isShort ? 0.0075 * m : 0.001 * m;

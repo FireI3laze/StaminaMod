@@ -74,6 +74,8 @@ public class SeatEntity extends Entity {
             BlockPos posBelow = this.blockPosition();
             BlockState state = this.level().getBlockState(posBelow);
             float hardness = state.getDestroySpeed(this.level(), posBelow);
+            hardness = Math.max(0.5f, hardness);
+
             float hardnessFactor = hardness > 0 ? 1.0f / hardness : 1.0f;
 
             player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {

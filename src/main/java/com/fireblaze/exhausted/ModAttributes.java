@@ -15,7 +15,7 @@ public class ModAttributes {
     // name = registry-name, description id = the string used for translations
     public static final RegistryObject<Attribute> STEP_UP =
             ATTRIBUTES.register("step_up",
-                    () -> new RangedAttribute("exhausted.step_up", 0.0D, -1024.0D, 1024.0D)
+                    () -> new RangedAttribute("attribute.name.exhausted.step_up", 0.0D, -1024.0D, 1024.0D)
             );
 
 

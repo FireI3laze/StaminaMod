@@ -36,7 +36,7 @@ public class Stamina {
         if (player.isCreative() || player.isSpectator()) return;
         float damageMultiplier = 1.0F;
         this.BASE_REGEN = (float)Settings.getRegenerationConfigs("baseRegenLong");
-        this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.03) * (double)restFactor * (double)hardnessFactor, 100.0);
+        this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.035) * (double)restFactor * (double)hardnessFactor, 100.0);
         this.longStamina = Math.min(this.longStamina + this.AMPLIFIED_REGEN, 100.0F);
         this.regenerate(player, restFactor, hardnessFactor);
         //System.out.println(restFactor + " | " + hardnessFactor);
