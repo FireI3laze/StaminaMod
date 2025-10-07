@@ -16,9 +16,6 @@ public class Stamina {
     private static final float MAX_STAMINA = 100.0F;
     private float BASE_REGEN;
     private float AMPLIFIED_REGEN;
-    private float armStrength;
-    private float legStrength;
-    private float staminaConsumption;
     private int staminaLvl = 0;
     private static final int MAX_STAMINA_LEVEL = 20;
     private float staminaExp = 0.0F;
@@ -39,14 +36,13 @@ public class Stamina {
         this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.035) * (double)restFactor * (double)hardnessFactor, 100.0);
         this.longStamina = Math.min(this.longStamina + this.AMPLIFIED_REGEN, 100.0F);
         this.regenerate(player, restFactor, hardnessFactor);
-        //System.out.println(restFactor + " | " + hardnessFactor);
     }
 
     public void regenerate(Player player, float restFactor, float hardnessFactor) {
         float damageMultiplier = 1.0F;
         if (this.shortStamina < this.longStamina) {
             this.BASE_REGEN = (float)Settings.getRegenerationConfigs("baseRegenShort") * this.longStamina;
-            this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.05) * (double)restFactor * (double)hardnessFactor, (double)this.longStamina);
+            this.AMPLIFIED_REGEN = (float)Math.min((double)(this.BASE_REGEN * damageMultiplier) * (1.0 + (double)this.staminaLvl * 0.05) * (double)restFactor * (double)hardnessFactor, this.longStamina);
             this.shortStamina = Math.min(this.shortStamina + this.AMPLIFIED_REGEN, this.longStamina);
         }
         /*
@@ -62,7 +58,7 @@ public class Stamina {
     public void consume(float shortStamina, float longStamina, float armorMultiplier, Player player) {
         if (player.isCreative() || player.isSpectator()) return;
         this.shortStamina = (float)Math.max(this.shortStamina - shortStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.015), 0.0);
-        this.longStamina = (float)Math.max(this.longStamina - longStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.03), 0.0);
+        this.longStamina = (float)Math.max(this.longStamina - longStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.04), 0.0);
         this.addExperience(shortStamina + longStamina, player);
         /*
         float armor = (float)Math.max(this.shortStamina - shortStamina * (1.0 - this.staminaLvl * 0.015) * armorMultiplier, 0.0);
@@ -74,7 +70,7 @@ public class Stamina {
     public void consume(float shortStamina, float longStamina, float armorMultiplier, float blockHardness, Player player) {
         if (player.isCreative() || player.isSpectator()) return;
         this.shortStamina = (float)Math.max(0.0, this.shortStamina - shortStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.0075));
-        this.longStamina = (float)Math.max(0.0, this.longStamina - longStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.02));
+        this.longStamina = (float)Math.max(0.0, this.longStamina - longStamina * armorMultiplier * (1.0 - this.staminaLvl * 0.03));
         if (this.staminaLvl < 20) {
             this.addExperience(shortStamina + longStamina, player);
         }
