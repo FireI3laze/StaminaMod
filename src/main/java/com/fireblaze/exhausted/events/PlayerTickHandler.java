@@ -168,6 +168,7 @@ public class PlayerTickHandler {
             UUID SPEED_BONUS_1_UUID = UUID.fromString("44444444-4444-4444-4444-444444444444");
 
             // Prüfen, ob Modifier schon vorhanden sind
+            assert speed != null;
             boolean hasMalus3 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_MALUS_3_UUID));
             boolean hasMalus2 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_MALUS_2_UUID));
             boolean hasMalus1 = speed.getModifiers().stream().anyMatch(mod -> mod.getId().equals(SPEED_MALUS_1_UUID));
