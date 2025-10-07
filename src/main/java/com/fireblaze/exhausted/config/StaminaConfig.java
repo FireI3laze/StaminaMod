@@ -23,6 +23,8 @@ public class StaminaConfig {
 
         // === Sound ===
     public static final ForgeConfigSpec.BooleanValue SOUND_BREATHING;
+        // === Animation ===
+    public static final ForgeConfigSpec.BooleanValue ANIMATION_BREATHING;
 
         // === Death Resets ===
     public static final ForgeConfigSpec.BooleanValue KEEP_LEVEL_ON_DEATH;
@@ -165,6 +167,12 @@ public class StaminaConfig {
                     .comment("Enable or disable breath sound on low stamina")
                     .define("Allow Breath Sound", true);
             BUILDER.pop();
+
+        BUILDER.push("Animation");
+        ANIMATION_BREATHING = BUILDER
+                .comment("Enable or disable breath animation when breath sound is played (requires breath sound to be enabled)")
+                .define("Allow Breath Animation", true);
+        BUILDER.pop();
 
             BUILDER.push("Death-Resets");
             BUILDER.comment("Toggle here if you want to keep your stamina level upon death");

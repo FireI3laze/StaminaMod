@@ -61,7 +61,6 @@ public class ModMessages {
                 .decoder(StepUpS2CPacket::decode)
                 .consumerMainThread(StepUpS2CPacket::handle)
                 .add();
-
     }
 
     public static <MSG> void sendToServer(MSG message) {

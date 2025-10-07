@@ -265,6 +265,7 @@ public class Settings {
 
     public static double getNegativeEffect3Threshold() {return StaminaConfig.NEGATIVE_EFFECT_3_THRESHOLD.get();}
     public static boolean getBreathVolume() {return StaminaConfig.SOUND_BREATHING.get();}
+    public static boolean getBreathAnimation() {return StaminaConfig.ANIMATION_BREATHING.get();}
 
     // ----- Dimension Boost Blocks -----
     public static Map<String, String> getDimensionBoostBlocks() {

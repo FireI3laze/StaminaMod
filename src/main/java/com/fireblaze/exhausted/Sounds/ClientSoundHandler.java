@@ -1,5 +1,6 @@
 package com.fireblaze.exhausted.Sounds;
 
+import com.fireblaze.exhausted.client.CameraShakeHandler;
 import com.fireblaze.exhausted.config.Settings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
@@ -63,9 +64,15 @@ public class ClientSoundHandler {
                 manager.stop(currentSound);
                 currentSound = null;
             }
-
             currentSound = SimpleSoundInstance.forLocalAmbience(soundEvent, 1.0f, 1.0f);
             mc.getSoundManager().play(currentSound);
+
+            if (!Settings.getBreathAnimation()) return;
+            if (threshold == 0)
+                CameraShakeHandler.startShake(1.3f, 6000, 0.75f);
+            else if (threshold == 1 || threshold == 2) {
+                CameraShakeHandler.startShake(0.66f, 8000, 2.1f);
+            }
         }
     }
 }
