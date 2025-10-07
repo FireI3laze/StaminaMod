@@ -1,5 +1,6 @@
 package com.fireblaze.exhausted.comfort;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import com.fireblaze.exhausted.config.Settings;
@@ -17,9 +18,10 @@ public class ComfortCalculator {
         }
     }
 
-    public static ComfortResult calculateComfort(ServerLevel level, Player player) {
+    public static ComfortResult calculateComfort(ServerLevel level, Player player, BlockPos pos) {
         double comfort = 0.0;
         ComfortResult result = new ComfortResult(0.0);
+        pos = pos.above();
 
         StringBuilder string = new StringBuilder();
         if (player.isCreative() || player.isSpectator()) {
@@ -28,7 +30,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("walls") != 0) {
-            if (ComfortHelper.hasDecoratedWalls(level, player)) {
+            if (ComfortHelper.hasDecoratedWalls(level, pos)) {
                 double bonus = Settings.getComfortBonus("walls");
                 comfort += bonus;
                 string.append("Has deco walls +").append(bonus).append("\n");
@@ -36,7 +38,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("ceiling") != 0) {
-            if (ComfortHelper.hasCeilingHeight(level, player, 2)) {
+            if (ComfortHelper.hasCeilingHeight(level, pos, 2)) {
                 double bonus = Settings.getComfortBonus("ceiling");
                 comfort += bonus;
                 string.append("Has ceiling +").append(bonus).append("\n");
@@ -44,7 +46,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("space") != 0) {
-            if (ComfortHelper.hasEnoughSpace(level, player, 24)) {
+            if (ComfortHelper.hasEnoughSpace(level, pos, 24)) {
                 double bonus = Settings.getComfortBonus("space");
                 comfort += bonus;
                 string.append("Has enough space +").append(bonus).append("\n");
@@ -52,7 +54,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("light") != 0) {
-            if (ComfortHelper.hasGoodLighting(player)){
+            if (ComfortHelper.hasGoodLighting(level, pos)){
                 double bonus = Settings.getComfortBonus("light");
                 comfort += bonus;
                 string.append("Has good lighting +").append(bonus).append("\n");
@@ -60,7 +62,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("animal") != 0) {
-            if (ComfortHelper.hasFriendlyAnimalNearby(level, player)) {
+            if (ComfortHelper.hasFriendlyAnimalNearby(level, pos)) {
                 double bonus = Settings.getComfortBonus("animal");
                 comfort += bonus;
                 string.append("Animal nearby +").append(bonus).append("\n");
@@ -68,20 +70,20 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("food") != 0) {
-            if (ComfortHelper.chestWithFoodNearby(level, player)) {
+            if (ComfortHelper.chestWithFoodNearby(level, pos)) {
                 double bonus = Settings.getComfortBonus("food");
                 comfort += bonus;
                 string.append("Food around +").append(bonus).append("\n");
             } else result.issues.add("no_food_stock");
         }
 
-        double blockCount = ComfortHelper.countComfortBlocks(level, player);
+        double blockCount = ComfortHelper.countComfortBlocks(level, pos);
         double blockBonus = Math.min(Settings.getComfortBonus("block_max"), blockCount * Settings.getComfortBonus("block_per"));
         comfort += blockBonus;
         string.append("Comfort blocks: ").append(blockCount).append(" => +").append(blockBonus).append("%\n");
         result.issues.add("no_comfort_blocks");
 
-        if (ComfortHelper.hasBoostBlock(level, player)) {
+        if (ComfortHelper.hasBoostBlock(level, pos)) {
             double bonus = Settings.getComfortBonus("boost_block");
             comfort += bonus;
             string.append("Boost block present +").append(bonus).append("\n");
@@ -116,7 +118,7 @@ public class ComfortCalculator {
             result.issues.add("foreign_dimension");
         }
 
-        if (Settings.getComfortMalus("monsters") != 0 && ComfortHelper.monstersNearby(level, player)) {
+        if (Settings.getComfortMalus("monsters") != 0 && ComfortHelper.monstersNearby(level, pos)) {
             double malus = Settings.getComfortMalus("monsters");
             comfort += malus;
             string.append("Monsters around ").append(malus).append("\n");

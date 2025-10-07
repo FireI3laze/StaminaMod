@@ -1,7 +1,6 @@
 package com.fireblaze.exhausted.comfort;
 
 import com.fireblaze.exhausted.config.Settings;
-import com.fireblaze.exhausted.config.StaminaConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -17,13 +16,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-
 
 import java.util.*;
 
@@ -32,18 +31,14 @@ public class ComfortHelper {
     // Komfortblöcke (Glas, Blumentopf, Teppich, Crafting Table, Furnace, Chest, Tür)
     private static boolean isComfortBlock(Block block) {
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        String registryName = id.toString();
 
-        String registryName = id.toString(); // z.B. "minecraft:oak_door" oder "mod:magic_chest"
-
-        // Check Blocks
         if (Settings.getComfortBlocks().contains(registryName)) return true;
 
-        // Check Groups
         for (String keyword : Settings.getComfortBlockGroups()) {
             if (registryName.contains(keyword)) return true;
         }
 
-        // Storage Block Toggle
         if (Settings.isComfortStorageAllowed() && block instanceof EntityBlock entityBlock) {
             BlockEntity be = entityBlock.newBlockEntity(BlockPos.ZERO, block.defaultBlockState());
             if (be instanceof Container) return true;
@@ -52,41 +47,33 @@ public class ComfortHelper {
         return false;
     }
 
-
-    // Monster check
-    public static boolean monstersNearby(ServerLevel level, Player player) {
-        return (!level.getEntities(player, player.getBoundingBox().inflate(Settings.getComfortSettings("monsterRangeTolerance")),
-                e -> e.getType().getCategory() == MobCategory.MONSTER).isEmpty());
+    // Monster check basierend auf BlockPos
+    public static boolean monstersNearby(ServerLevel level, BlockPos pos) {
+        double range = Settings.getComfortSettings("monsterRangeTolerance");
+        AABB box = new AABB(pos).inflate(range);
+        return !level.getEntities((Entity) null, box, e -> e.getType().getCategory() == MobCategory.MONSTER).isEmpty();
     }
 
-    // Check Deckenhöhe
-    public static boolean hasCeilingHeight(ServerLevel level, Player player, int minHeight) {
-        BlockPos pos = player.blockPosition();
+    // Check Deckenhöhe basierend auf BlockPos
+    public static boolean hasCeilingHeight(ServerLevel level, BlockPos pos, int minHeight) {
         for (int y = 1; y <= minHeight; y++) {
-            if (level.isEmptyBlock(pos.above(y))) continue;
-            return false;
+            if (!level.isEmptyBlock(pos.above(y))) return false;
         }
         return true;
     }
 
-    // Raumgröße (sehr basic, Floodfill wäre genauer)
-    public static boolean hasEnoughSpace(ServerLevel level, Player player, int minAirBlocks) {
-        RoomScanResults result = lastRoomScans.get(player);
-        if (result == null) {
-            // Falls noch kein Scan gemacht wurde → einmalig scannen
-            result = scanRoom(level, player);
-        }
-
+    // Raumgröße (basierend auf BlockPos)
+    public static boolean hasEnoughSpace(ServerLevel level, BlockPos pos, int minAirBlocks) {
+        RoomScanResults result = lastRoomScansByPos.getOrDefault(level, Collections.emptyMap()).get(pos);
+        if (result == null) result = scanRoom(level, pos);
         return result.airBlocks >= minAirBlocks;
     }
 
-    // Wände analysieren (sehr basic: check um Spieler herum)
-
-    // Speichert temporär ersetzte Blöcke für Reset
+    // Temporäre Daten für Scan
+    private static final Map<ServerLevel, Map<BlockPos, RoomScanResults>> lastRoomScansByPos = new HashMap<>();
     private static final Map<ServerLevel, Map<BlockPos, BlockState>> replacedBlocks = new HashMap<>();
-    private static final Map<Player, RoomScanResults> lastRoomScans = new HashMap<>();
 
-    // === Ergebnisobjekt für Floodfill ===
+    // Scan-Ergebnisobjekt
     public static class RoomScanResults {
         public int airBlocks;
         public int totalBlocks;
@@ -98,12 +85,12 @@ public class ComfortHelper {
         public Set<BlockPos> visitedPositions;
     }
 
-    public static RoomScanResults getLastScan(Player player) {
-        return lastRoomScans.get(player);
+    public static RoomScanResults getLastScan(ServerLevel level, BlockPos pos) {
+        return lastRoomScansByPos.getOrDefault(level, Collections.emptyMap()).get(pos);
     }
 
-    // === Scan-Methode ===
-    public static RoomScanResults scanRoom(ServerLevel level, Player player) {
+    // === Scan-Methode basierend auf BlockPos ===
+    public static RoomScanResults scanRoom(ServerLevel level, BlockPos start) {
         Settings.loadComfortSettings();
 
         int lightSum = 0;
@@ -114,7 +101,6 @@ public class ComfortHelper {
         Set<BlockPos> goodBlocksSet = new HashSet<>();
         int maxAirBlocks = 500;
 
-        BlockPos start = player.blockPosition();
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
         queue.add(start);
@@ -139,13 +125,11 @@ public class ComfortHelper {
                 if (state.isAir()) {
                     result.airBlocks++;
                     queue.add(neighbor);
-                    lightSum += level.getBrightness(LightLayer.BLOCK, neighbor);
-                    lightCount++;
                 } else {
                     result.totalBlocks++;
                     ResourceLocation blockId = level.registryAccess()
                             .registryOrThrow(Registries.BLOCK)
-                            .getKey(level.getBlockState(neighbor).getBlock());
+                            .getKey(state.getBlock());
                     if (blockId != null && Settings.getWallBlocksBlacklist().contains(blockId.toString())) {
                         result.badBlocks++;
                         badBlocksSet.add(neighbor);
@@ -153,50 +137,28 @@ public class ComfortHelper {
                         result.goodBlocks++;
                         goodBlocksSet.add(neighbor);
                     }
-                    lightSum += level.getBrightness(LightLayer.BLOCK, neighbor);
-                    lightCount++;
                 }
 
-                if (result.airBlocks >= maxAirBlocks) break;
-
-                if (state.getBlock() instanceof ChestBlock) {
-                    result.chestPositions.add(neighbor);
-                }
+                if (state.getBlock() instanceof ChestBlock) result.chestPositions.add(neighbor);
             }
-        }
-
-        if(lightCount > 0){
-            result.averageLight = lightSum / (float) lightCount;
-        } else {
-            result.averageLight = 0;
         }
 
         result.visitedPositions = new HashSet<>(visited);
-
-
-        // Blöcke hervorheben
-        // highlightBlocks(level, badBlocksSet, goodBlocksSet);
-        //System.out.println(result.badBlocks + " | " + (result.totalBlocks - result.badBlocks));
+        result.averageLight = lightCount > 0 ? lightSum / (float) lightCount : 0;
         result.decorated = result.totalBlocks == 0 || ((float) result.badBlocks / result.totalBlocks) <= 0.5f;
 
-        // Scan-Ergebnis speichern
-        lastRoomScans.put(player, result);
-
+        lastRoomScansByPos.computeIfAbsent(level, l -> new HashMap<>()).put(start, result);
         return result;
     }
 
-    // === Wrapper für direkten Boolean ===
-    public static boolean hasDecoratedWalls(ServerLevel level, Player player) {
-        return scanRoom(level, player).decorated;
+    // Wrapper für Boolean
+    public static boolean hasDecoratedWalls(ServerLevel level, BlockPos pos) {
+        return scanRoom(level, pos).decorated;
     }
 
-    // === Ceiling-Check (min. 3 Blöcke über Spielerhöhe) ===
-    public static boolean hasCeilingHeight(ServerLevel level, Player player) {
-        BlockPos pos = player.blockPosition();
+    public static boolean hasCeilingHeight(ServerLevel level, BlockPos pos) {
         for (int i = 1; i <= 3; i++) {
-            if (level.getBlockState(pos.above(i)).isAir()) {
-                return false;
-            }
+            if (level.getBlockState(pos.above(i)).isAir()) return false;
         }
         return true;
     }
@@ -217,7 +179,6 @@ public class ComfortHelper {
         }
     }
 
-    // Rücksetzen aller ersetzten Blöcke
     public static void resetHighlightedBlocks(ServerLevel level) {
         if (!replacedBlocks.containsKey(level)) return;
 
@@ -225,62 +186,36 @@ public class ComfortHelper {
         for (Map.Entry<BlockPos, BlockState> entry : levelReplacements.entrySet()) {
             level.setBlock(entry.getKey(), entry.getValue(), 3);
         }
-
         replacedBlocks.remove(level);
     }
 
     private static boolean isCaveBlock(ServerLevel level, BlockPos pos) {
         var state = level.getBlockState(pos);
-
         return state.is(Blocks.STONE) || state.is(Blocks.DEEPSLATE) || state.is(Blocks.GRAVEL) ||
                 state.is(Blocks.DIRT) || state.is(Blocks.TUFF) || state.is(Blocks.NETHERRACK) || state.is(Blocks.SOUL_SAND) ||
                 state.is(Blocks.SOUL_SOIL) || state.is(Blocks.BASALT) || state.is(Blocks.BLACKSTONE) ||
                 state.is(Blocks.END_STONE) || state.getBlock().getDescriptionId().toLowerCase().contains("ore");
     }
 
+    public static boolean hasGoodLighting(ServerLevel level, BlockPos pos) {
+        RoomScanResults result = getLastScan(level, pos);
 
-    // Lichtlevel Durchschnitt prüfen
-    public static boolean hasGoodLighting(Player player) {
-        RoomScanResults result = lastRoomScans.get(player);
+        if (result != null && result.averageLight >= 3.5f) return true;
 
-        // 1. Lichtlevel prüfen (für Nacht / Höhlen)
-        if (result != null && result.averageLight >= 3.5f) {
-            return true;
+        while (pos.getY() < level.getMaxBuildHeight()) {
+            BlockState state = level.getBlockState(pos);
+            if (!state.isAir() && !state.is(Blocks.GLASS) && !state.is(BlockTags.LEAVES) && !state.is(Blocks.TORCH)) return false;
+            pos = pos.above();
         }
-
-        Level level = player.level();
-        BlockPos pos = player.blockPosition().above();
-
-        // 2. Tagsüber prüfen: freier Himmel oder nur transparente Blöcke
-        if (level.isDay()) {
-            while (pos.getY() < level.getMaxBuildHeight()) {
-                BlockState state = level.getBlockState(pos);
-
-                // Undurchsichtige Blöcke abbrechen
-                if (!state.isAir() && !state.is(Blocks.GLASS) && !state.is(BlockTags.LEAVES) && !state.is(Blocks.TORCH)) {
-                    return false;
-                }
-
-                pos = pos.above();
-            }
-
-            // Nur Luft/Transparente Blöcke bis zum freien Himmel
-            return true;
-        }
-
-        // Nacht und kein ausreichendes Licht
-        return false;
+        return true;
     }
 
-
-
-    // Essen in Kiste?
-    public static boolean chestWithFoodNearby(ServerLevel level, Player player) {
-        RoomScanResults scan = lastRoomScans.get(player);
+    public static boolean chestWithFoodNearby(ServerLevel level, BlockPos pos) {
+        RoomScanResults scan = getLastScan(level, pos);
         if (scan == null) return false;
 
-        for (BlockPos pos : scan.chestPositions) {
-            BlockEntity be = level.getBlockEntity(pos);
+        for (BlockPos p : scan.chestPositions) {
+            BlockEntity be = level.getBlockEntity(p);
             if (be instanceof ChestBlockEntity chest) {
                 for (int i = 0; i < chest.getContainerSize(); i++) {
                     ItemStack stack = chest.getItem(i);
@@ -291,85 +226,57 @@ public class ComfortHelper {
         return false;
     }
 
-
-
-    // Tier in der Nähe
-    public static boolean hasFriendlyAnimalNearby(ServerLevel level, Player player) {
-        RoomScanResults scan = lastRoomScans.get(player);
+    public static boolean hasFriendlyAnimalNearby(ServerLevel level, BlockPos pos) {
+        RoomScanResults scan = getLastScan(level, pos);
         if (scan == null || scan.visitedPositions == null) return false;
 
-        for (BlockPos pos : scan.visitedPositions) {
-            AABB box = new AABB(pos);
+        for (BlockPos p : scan.visitedPositions) {
+            AABB box = new AABB(p);
             List<Entity> entities = level.getEntities((Entity) null, box, e ->
-                    e.getType().getCategory() == MobCategory.CREATURE
-                            || e.getType() == EntityType.WOLF
-                            || e.getType() == EntityType.CAT
+                    e.getType().getCategory() == MobCategory.CREATURE ||
+                            e.getType() == EntityType.WOLF ||
+                            e.getType() == EntityType.CAT
             );
-
-            if (!entities.isEmpty()) {
-                return true;
-            }
+            if (!entities.isEmpty()) return true;
         }
-
         return false;
     }
 
-
-    // Komfortblöcke zählen
-    public static double countComfortBlocks(ServerLevel level, Player player) {
-        RoomScanResults scan = lastRoomScans.get(player);
+    public static double countComfortBlocks(ServerLevel level, BlockPos pos) {
+        RoomScanResults scan = getLastScan(level, pos);
         if (scan == null || scan.visitedPositions == null) return 0;
         Settings.loadComfortSettings();
 
         double count = 0;
         Map<Block, Integer> seenBlocks = new HashMap<>();
 
-        for (BlockPos pos : scan.visitedPositions) {
-            BlockState state = level.getBlockState(pos);
+        for (BlockPos p : scan.visitedPositions) {
+            BlockState state = level.getBlockState(p);
             Block block = state.getBlock();
-
             if (isComfortBlock(block)) {
                 int occurrences = seenBlocks.getOrDefault(block, 0);
-
-                if (occurrences == 0) {
-                    // erstes Mal -> volle Effektivität
-                    count += 1;
-                } else {
-                    // ab dem zweiten Mal -> halbe Effektivität
-                    count += 0.5;
-                }
-
+                count += occurrences == 0 ? 1 : 0.5;
                 seenBlocks.put(block, occurrences + 1);
             }
         }
         return count;
     }
 
-
-    public static boolean hasBoostBlock(ServerLevel level, Player player) {
-        RoomScanResults scan = lastRoomScans.get(player);
+    public static boolean hasBoostBlock(ServerLevel level, BlockPos pos) {
+        RoomScanResults scan = getLastScan(level, pos);
         if (scan == null || scan.visitedPositions == null) return false;
 
-        // Dimension bestimmen
         String dim = level.dimension().location().toString();
         Map<String, String> boostMap = Settings.getDimensionBoostBlocks();
-
-        // Für diese Dimension den gewünschten Boost-Block holen
         String blockId = boostMap.get(dim);
         if (blockId == null) return false;
 
         Block targetBlock = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
         if (targetBlock == null) return false;
 
-        for (BlockPos pos : scan.visitedPositions) {
-            BlockState state = level.getBlockState(pos);
-
-            if (state.is(targetBlock)) {
-                return true;
-            }
+        for (BlockPos p : scan.visitedPositions) {
+            if (level.getBlockState(p).is(targetBlock)) return true;
         }
-
         return false;
     }
-
 }

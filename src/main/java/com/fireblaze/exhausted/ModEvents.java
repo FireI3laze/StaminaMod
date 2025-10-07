@@ -108,7 +108,7 @@ public class ModEvents {
 
             // Comfort calculation
             double comfortThreshold = Settings.getComfortThresholdSit();
-            ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort(player.serverLevel(), player);
+            ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort(player.serverLevel(), player, clickedPos);
             double comfort = comfortResult.comfort;
             List<String> issues = comfortResult.issues;
 

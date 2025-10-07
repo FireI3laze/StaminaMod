@@ -10,8 +10,6 @@ import com.fireblaze.exhausted.networking.ModMessages;
 import com.fireblaze.exhausted.networking.packet.StaminaDataSyncS2CPacket;
 import com.fireblaze.exhausted.comfort.ComfortCalculator;
 import com.fireblaze.exhausted.Sounds.PlaySoundPacket;
-import com.fireblaze.exhausted.networking.packet.StepUpS2CPacket;
-import com.fireblaze.exhausted.stepUp.StepUpPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,7 +36,6 @@ import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -213,13 +210,6 @@ public class PlayerTickHandler {
 
             ModMessages.sendToPlayer(new PlaySoundPacket(newThreshold), (ServerPlayer) player);
             stamina.tick(player, tickMultiplier);
-
-            /*
-            ModMessages.sendToPlayer(new StepUpS2CPacket(1.0f), (ServerPlayer) player);
-            stamina.tick(player, tickMultiplier);
-
-            player.setMaxUpStep(1.0f);
-            */
 
             ModMessages.sendToPlayer(new StaminaDataSyncS2CPacket(
                     shortStam, longStam, stamina.getLongStaminaCap(), stamina.getStaminaExp(), stamina.getStaminaLvl()
@@ -404,7 +394,8 @@ public class PlayerTickHandler {
         if (player.isCreative() || player.isSpectator()) return;
 
         double comfortThreshold = Settings.getComfortThresholdSleep();
-        ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort((ServerLevel) player.level(), player);
+        BlockPos bedPos = event.getPos();
+        ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort((ServerLevel) player.level(), player, bedPos);
         double comfort = comfortResult.comfort;
         List<String> issues = comfortResult.issues;
 
@@ -536,8 +527,10 @@ public class PlayerTickHandler {
                 return;
             }
 
+            BlockPos mountPos = vehicle.blockPosition();
+
             double comfortThreshold = Settings.getComfortThresholdSit();
-            ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort((ServerLevel) player.level(), player);
+            ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort((ServerLevel) player.level(), player, mountPos);
             double comfort = comfortResult.comfort;
             List<String> issues = comfortResult.issues;
 
