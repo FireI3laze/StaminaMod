@@ -23,7 +23,7 @@ public class ClientSoundHandler {
         // Check if sound is registered
         SoundEvent soundEvent = getSoundEvent(newThreshold);
         if (soundEvent == null && newThreshold != -1) {
-            System.out.println("NEGATIVE_" + newThreshold + " noch nicht registriert, in Queue setzen!");
+            //System.out.println("NEGATIVE_" + newThreshold + " noch nicht registriert, in Queue setzen!");
             pendingThresholds.add(newThreshold);
             // Try again later
             Minecraft.getInstance().execute(ClientSoundHandler::tryPendingSounds);

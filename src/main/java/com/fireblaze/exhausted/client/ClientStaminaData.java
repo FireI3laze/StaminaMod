@@ -24,4 +24,10 @@ public class ClientStaminaData {
     public static float getPlayerMaxStamina() {
         return playerMaxStamina;
     }
+    public static float getPlayerStaminaLvl() {
+        return playerStaminaLvl;
+    }
+    public static float getPlayerStaminaExp() {
+        return playerStaminaExp;
+    }
 }

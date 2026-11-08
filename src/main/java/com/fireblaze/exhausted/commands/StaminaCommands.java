@@ -1,6 +1,7 @@
 package com.fireblaze.exhausted.commands;
 
 import com.fireblaze.exhausted.capability.StaminaProvider;
+import com.fireblaze.exhausted.comfort.ComfortCalculator;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -24,8 +25,8 @@ public class StaminaCommands {
                 Commands.literal("stamina")
                         .requires(source -> source.hasPermission(2)) // nur OPs
 
-                        // ===== LEVEL =====
                         .then(Commands.literal("set")
+                                // ===== LEVEL =====
                                 .then(Commands.literal("level")
                                         .then(Commands.argument("value", IntegerArgumentType.integer(MIN_LEVEL, MAX_LEVEL))
                                                 .executes(ctx -> setLevel(ctx.getSource().getPlayerOrException(),
@@ -37,7 +38,63 @@ public class StaminaCommands {
                                                             Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "targets");
                                                             return setLevel(targets, value, ctx.getSource());
                                                         }))
-                                        )))
+                                        ))
+                                // ===== STAMINA =====
+                                .then(Commands.literal("longStamina")
+                                        .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
+                                                .executes(ctx -> setStaminaValue(
+                                                        ctx.getSource().getPlayerOrException(),
+                                                        IntegerArgumentType.getInteger(ctx, "value"),
+                                                        "long",
+                                                        ctx.getSource()
+                                                ))
+                                                .then(Commands.argument("targets", EntityArgument.players())
+                                                        .executes(ctx -> setStaminaValue(
+                                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                                IntegerArgumentType.getInteger(ctx, "value"),
+                                                                "long",
+                                                                ctx.getSource()
+                                                        ))
+                                                )
+                                        )
+                                )
+                                .then(Commands.literal("shortStamina")
+                                        .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
+                                                .executes(ctx -> setStaminaValue(
+                                                        ctx.getSource().getPlayerOrException(),
+                                                        IntegerArgumentType.getInteger(ctx, "value"),
+                                                        "short",
+                                                        ctx.getSource()
+                                                ))
+                                                .then(Commands.argument("targets", EntityArgument.players())
+                                                        .executes(ctx -> setStaminaValue(
+                                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                                IntegerArgumentType.getInteger(ctx, "value"),
+                                                                "short",
+                                                                ctx.getSource()
+                                                        ))
+                                                )
+                                        )
+                                )
+                                .then(Commands.literal("stamina")
+                                        .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
+                                                .executes(ctx -> setStaminaValue(
+                                                        ctx.getSource().getPlayerOrException(),
+                                                        IntegerArgumentType.getInteger(ctx, "value"),
+                                                        "both",
+                                                        ctx.getSource()
+                                                ))
+                                                .then(Commands.argument("targets", EntityArgument.players())
+                                                        .executes(ctx -> setStaminaValue(
+                                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                                IntegerArgumentType.getInteger(ctx, "value"),
+                                                                "both",
+                                                                ctx.getSource()
+                                                        ))
+                                                )
+                                        )
+                                )
+                        )
 
                         .then(Commands.literal("add")
                                 .then(Commands.literal("level")
@@ -111,6 +168,7 @@ public class StaminaCommands {
                                         )))
         );
 
+        /*
         dispatcher.register(
                 Commands.literal("comfort_reset")
                         .requires(source -> source.hasPermission(2)) // nur OPs
@@ -121,6 +179,34 @@ public class StaminaCommands {
                             ctx.getSource().sendSuccess(() -> Component.literal("Highlighted blocks reset!"), true);
                             return Command.SINGLE_SUCCESS;
                         })
+        );
+        */
+
+        dispatcher.register(
+                Commands.literal("comfort")
+                        .requires(source -> source.hasPermission(2)) // nur OPs
+
+                        // ===== COMFORT =====
+                        .then(Commands.literal("get")
+                                .executes(context -> {
+
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+
+                                    ComfortCalculator.ComfortResult result =
+                                            ComfortCalculator.calculateComfort(
+                                                    player.serverLevel(),
+                                                    player,
+                                                    player.blockPosition()
+                                            );
+
+                                    context.getSource().sendSuccess(
+                                            () -> Component.literal(result.details),
+                                            false
+                                    );
+
+                                    return 1;
+                                })
+                        )
         );
     }
 
@@ -218,6 +304,54 @@ public class StaminaCommands {
                         player.getName().getString() + " Stamina Experience decreased by " + amount + " (now: " + newExp + ")"), true);
             });
         }
+        return Command.SINGLE_SUCCESS;
+    }
+
+
+    private static int setStaminaValue(
+            ServerPlayer player,
+            int value,
+            String type,
+            CommandSourceStack source
+    ) {
+        return setStaminaValue(java.util.List.of(player), value, type, source);
+    }
+
+    private static int setStaminaValue(
+            Collection<ServerPlayer> players,
+            int value,
+            String type,
+            CommandSourceStack source
+    ) {
+        for (ServerPlayer player : players) {
+            player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+                switch (type) {
+                    case "long" ->
+                            stamina.setLongStamina((float) value);
+
+                    case "short" ->
+                            stamina.setShortStamina((float) value);
+
+                    case "both" -> {
+                        stamina.setLongStamina((float) value);
+                        stamina.setShortStamina((float) value);
+                    }
+                }
+
+                source.sendSuccess(
+                        () -> Component.literal(
+                                player.getName().getString()
+                                        + ": "
+                                        + type
+                                        + " Stamina set to "
+                                        + value
+                                        + "%"
+                        ),
+                        true
+                );
+            });
+        }
+
         return Command.SINGLE_SUCCESS;
     }
 }

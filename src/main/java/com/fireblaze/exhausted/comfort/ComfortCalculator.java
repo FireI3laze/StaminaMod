@@ -1,5 +1,6 @@
 package com.fireblaze.exhausted.comfort;
 
+import com.fireblaze.exhausted.config.CommonConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +13,7 @@ public class ComfortCalculator {
     public static class ComfortResult {
         public double comfort;
         public final List<String> issues = new ArrayList<>();
+        public String details = "";
 
         public ComfortResult(double comfort) {
             this.comfort = comfort;
@@ -38,7 +40,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("ceiling") != 0) {
-            if (ComfortHelper.hasCeilingHeight(level, pos, 2)) {
+            if (ComfortHelper.hasCeilingHeight(level, pos, CommonConfig.CEILING_HEIGHT_REQUIREMENT.get())) {
                 double bonus = Settings.getComfortBonus("ceiling");
                 comfort += bonus;
                 string.append("Has ceiling +").append(bonus).append("\n");
@@ -46,7 +48,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("space") != 0) {
-            if (ComfortHelper.hasEnoughSpace(level, pos, 24)) {
+            if (ComfortHelper.hasEnoughSpace(level, pos, CommonConfig.ROOM_AIR_BLOCK_AMOUNT_REQUIREMENT.get())) {
                 double bonus = Settings.getComfortBonus("space");
                 comfort += bonus;
                 string.append("Has enough space +").append(bonus).append("\n");
@@ -70,7 +72,7 @@ public class ComfortCalculator {
         }
 
         if (Settings.getComfortBonus("food") != 0) {
-            if (ComfortHelper.chestWithFoodNearby(level, pos)) {
+            if (ComfortHelper.inventoryWithFoodNearby(level, pos)) {
                 double bonus = Settings.getComfortBonus("food");
                 comfort += bonus;
                 string.append("Food around +").append(bonus).append("\n");
@@ -104,7 +106,7 @@ public class ComfortCalculator {
             result.issues.add("hurt");
         }
 
-        if (player.getFoodData().getFoodLevel() < 16) {
+        if (player.getFoodData().getFoodLevel() < CommonConfig.FOOD_REQUIREMENT.get()) {
             double malus = Settings.getComfortMalus("hungry");
             comfort += malus;
             string.append("Hungry ").append(malus).append("\n");
@@ -126,8 +128,10 @@ public class ComfortCalculator {
         }
 
         // Optional: Debug
+        result.details = string.toString();
         result.comfort = comfort;
         //System.out.println(string);
+        player.getPersistentData().putDouble("comfort", comfort);
 
         return result;
     }

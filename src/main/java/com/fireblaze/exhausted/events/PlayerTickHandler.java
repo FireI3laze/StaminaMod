@@ -1,16 +1,21 @@
 package com.fireblaze.exhausted.events;
 
+import com.fireblaze.exhausted.ModTags;
 import com.fireblaze.exhausted.ModifierUtils;
 import com.fireblaze.exhausted.capability.StaminaProvider;
 import com.fireblaze.exhausted.comfort.ComfortProvider;
 import com.fireblaze.exhausted.comfort.ComfortUtils;
+import com.fireblaze.exhausted.config.ClientConfig;
+import com.fireblaze.exhausted.config.CommonConfig;
 import com.fireblaze.exhausted.config.Settings;
 import com.fireblaze.exhausted.entity.SeatEntity;
 import com.fireblaze.exhausted.networking.ModMessages;
 import com.fireblaze.exhausted.networking.packet.StaminaDataSyncS2CPacket;
 import com.fireblaze.exhausted.comfort.ComfortCalculator;
 import com.fireblaze.exhausted.Sounds.PlaySoundPacket;
+import com.fireblaze.exhausted.utils.FoodStaminaRegeneration;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
@@ -35,6 +40,7 @@ import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
@@ -52,6 +58,8 @@ public class PlayerTickHandler {
     private static final Map<UUID, Double> lastPlayerPosZ = new HashMap<>();
     private static final Map<UUID, BlockPos> miningPlayers = new HashMap<>();
     private static final Map<UUID, Integer> tickCounter = new HashMap<>();
+    private static float previousTickShortStam = 0;
+    private static float previousTickLongStam = 0;
     private static int currentTick = 0;
     public static final int tickMultiplier = 5;
 
@@ -93,6 +101,7 @@ public class PlayerTickHandler {
                 );
             }
 
+            /*
             if (player.getDeltaMovement().y > 0 && !player.onGround() && !player.isInWater()) {
                 stamina.consume(
                         (float) Settings.getMovementCost("jump", true) * tickMultiplier,
@@ -100,6 +109,7 @@ public class PlayerTickHandler {
                         getArmorStaminaMultiplier(player, "movement"), player
                 );
             }
+            */
 
             if (player.isBlocking()) {
                 stamina.consume(
@@ -110,48 +120,76 @@ public class PlayerTickHandler {
             }
 
             // Mining-Stamina (mit Faktor 5)
+
+            // Mining-Stamina (mit Faktor 5)
             BlockPos blockPos = miningPlayers.get(id);
+
             if (blockPos != null) {
                 BlockState blockState = player.level().getBlockState(blockPos);
+
                 if (!blockState.isAir()) {
                     float hardness = blockState.getDestroySpeed(player.level(), blockPos);
                     ItemStack heldItem = player.getMainHandItem();
-                    // float armorFactor = 1.0f;
-                    // if (!(StaminaConfig.POTATO_MODE.get() || StaminaConfig.ARMOR_DISABLED.get())) armorFactor = getArmorStaminaMultiplier(player, "action");
                     float armorFactor = getArmorStaminaMultiplier(player, "action");
+
+                    // Werkzeug-Kategorie des Blocks bestimmen
+                    String toolType = null;
+
+                    if (blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
+                        toolType = "pickaxe";
+                    } else if (blockState.is(BlockTags.MINEABLE_WITH_AXE)) {
+                        toolType = "axe";
+                    } else if (blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)) {
+                        toolType = "shovel";
+                    } else if (blockState.is(BlockTags.MINEABLE_WITH_HOE)) {
+                        toolType = "hoe";
+                    }
+
                     if (heldItem.isCorrectToolForDrops(blockState)) {
-                        if (blockState.is(BlockTags.MINEABLE_WITH_PICKAXE))
-                            stamina.consume((float) Settings.getMiningCost("pickaxe", true) * tickMultiplier,
-                                    (float) Settings.getMiningCost("pickaxe", false) * tickMultiplier,
-                                    armorFactor, hardness, player);
-                        else if (blockState.is(BlockTags.MINEABLE_WITH_AXE))
-                            stamina.consume((float) Settings.getMiningCost("axe", true) * tickMultiplier,
-                                    (float) Settings.getMiningCost("axe", false) * tickMultiplier,
-                                    armorFactor, hardness, player);
-                        else if (blockState.is(BlockTags.MINEABLE_WITH_SHOVEL))
-                            stamina.consume((float) Settings.getMiningCost("shovel", true) * tickMultiplier,
-                                    (float) Settings.getMiningCost("shovel", false) * tickMultiplier,
-                                    armorFactor, hardness, player);
-                        else if (blockState.is(BlockTags.MINEABLE_WITH_HOE))
-                            stamina.consume((float) Settings.getMiningCost("hoe", true) * tickMultiplier,
-                                    (float) Settings.getMiningCost("hoe", false) * tickMultiplier,
-                                    armorFactor, hardness, player);
-                        else
-                            stamina.consume((float) Settings.getMiningCost("unknown", true) * tickMultiplier,
-                                    (float) Settings.getMiningCost("unknown", false) * tickMultiplier,
-                                    armorFactor, hardness, player);
-                    } else {
-                        // Faust / falsches Werkzeug
-                        stamina.consume((float) Settings.getMiningCost("hand", true) * tickMultiplier,
+                        // Korrektes Werkzeug: Kosten der Werkzeug-Kategorie
+                        String costType = toolType != null ? toolType : "unknown";
+
+                        stamina.consume(
+                                (float) Settings.getMiningCost(costType, true) * tickMultiplier,
+                                (float) Settings.getMiningCost(costType, false) * tickMultiplier,
+                                armorFactor,
+                                hardness,
+                                player
+                        );
+                    } else if (toolType != null) {
+                        // Falsches Werkzeug für einen Block mit Werkzeug-Kategorie
+                        stamina.consume(
+                                (float) Settings.getMiningCost("hand", true) * tickMultiplier,
                                 (float) Settings.getMiningCost("hand", false) * tickMultiplier,
-                                1f, hardness, player);
+                                1f,
+                                hardness,
+                                player
+                        );
+                    } else {
+                        // Block hat keine Werkzeug-Kategorie, z. B. Glas
+                        stamina.consume(
+                                (float) Settings.getMiningCost("unknown", true) * tickMultiplier,
+                                (float) Settings.getMiningCost("unknown", false) * tickMultiplier,
+                                armorFactor,
+                                hardness,
+                                player
+                        );
                     }
                 }
             }
 
-            // Potion-Effekte
             float shortStam = stamina.getShortStamina();
             float longStam = stamina.getLongStamina();
+
+            int notificationThreshold = CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_STAMINA_THRESHOLD.get();
+
+            if (longStam < notificationThreshold && previousTickLongStam > notificationThreshold && CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_CAP.get() && ClientConfig.EXHAUSTION_THRESHOLD.get()) {
+                player.displayClientMessage(
+                        Component.literal(ClientConfig.EXHAUSTION_THRESHOLD_TEXT.get()),
+                        true
+                );
+            }
+            previousTickLongStam = longStam;
 
             // Negative / Positive Effects
             // Tick-Loop:
@@ -179,30 +217,30 @@ public class PlayerTickHandler {
                 hungerSimulation(player, hungerDrainInterval);
                 applyNegativeEffects(player);
                 if (!hasMalus3) {
-                    ModifierUtils.removeAllCustomModifiers(player);
-                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 3", -0.45, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_3_UUID);
-                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 3", -0.75, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                    hungerSimulation(player, CommonConfig.NEGATIVE_EFFECT_3_HUNGER_DRAIN_INTERVAL.get());
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 3", CommonConfig.NEGATIVE_EFFECT_3_MOVEMENT_SPEED_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_3_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 3", CommonConfig.NEGATIVE_EFFECT_3_DAMAGE_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL);
                 }
             } else if (shortStam <= Settings.getNegativeEffect2Threshold()) {
                 newThreshold = 1;
-                hungerSimulation(player, hungerDrainInterval);
+                hungerSimulation(player, CommonConfig.NEGATIVE_EFFECT_2_HUNGER_DRAIN_INTERVAL.get());
                 if (!hasMalus2) {
                     ModifierUtils.removeAllCustomModifiers(player);
-                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 2", -0.3, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_2_UUID);
-                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 2", -0.5, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 2", CommonConfig.NEGATIVE_EFFECT_2_MOVEMENT_SPEED_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_2_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 2", CommonConfig.NEGATIVE_EFFECT_2_DAMAGE_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL);
                 }
             } else if (shortStam <= Settings.getNegativeEffect1Threshold()) {
                 newThreshold = 0;
                 if (!hasMalus1) {
                     ModifierUtils.removeAllCustomModifiers(player);
-                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 1", -0.15, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_1_UUID);
-                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 1", -0.25, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed malus 1", CommonConfig.NEGATIVE_EFFECT_1_MOVEMENT_SPEED_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_MALUS_1_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage malus 1", CommonConfig.NEGATIVE_EFFECT_1_DAMAGE_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL);
                 }
             } else if (shortStam >= Settings.getPositiveEffectThreshold()) {
                 if (!hasBonus1) {
                     ModifierUtils.removeAllCustomModifiers(player);
-                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed bonus 1", 0.2, AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_BONUS_1_UUID);
-                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage bonus 1", 3, AttributeModifier.Operation.ADDITION);
+                    ModifierUtils.addCustomModifier(player, Attributes.MOVEMENT_SPEED, "Speed bonus 1", CommonConfig.POSITIVE_EFFECT_SPEED_PERCENTAGE.get(), AttributeModifier.Operation.MULTIPLY_TOTAL, SPEED_BONUS_1_UUID);
+                    ModifierUtils.addCustomModifier(player, Attributes.ATTACK_DAMAGE, "Damage bonus 1", CommonConfig.POSITIVE_EFFECT_DAMAGE_FLAT.get(), AttributeModifier.Operation.ADDITION);
                 }
             } else {
                 ModifierUtils.removeAllCustomModifiers(player);
@@ -211,10 +249,13 @@ public class PlayerTickHandler {
             ModMessages.sendToPlayer(new PlaySoundPacket(newThreshold), (ServerPlayer) player);
             stamina.tick(player, tickMultiplier);
 
-            ModMessages.sendToPlayer(new StaminaDataSyncS2CPacket(
-                    shortStam, longStam, stamina.getLongStaminaCap(), stamina.getStaminaExp(), stamina.getStaminaLvl()
-            ), (ServerPlayer) player);
+            if (previousTickShortStam != shortStam) {
+                ModMessages.sendToPlayer(new StaminaDataSyncS2CPacket(
+                        shortStam, longStam, stamina.getLongStaminaCap(), stamina.getStaminaExp(), stamina.getStaminaLvl()
+                ), (ServerPlayer) player);
 
+                previousTickShortStam = shortStam;
+            }
         });
     }
 
@@ -235,14 +276,7 @@ public class PlayerTickHandler {
 
     public static void applyNegativeEffects(Player player) {
         int duration = 100;
-        refreshEffect(player, MobEffects.BLINDNESS, 0, duration);
-    }
-
-    public static void applyPositiveEffects(Player player, int amplifier) {
-        int duration = 100;
-        refreshEffect(player, MobEffects.MOVEMENT_SPEED, amplifier, duration);
-        refreshEffect(player, MobEffects.DIG_SPEED, amplifier, duration);
-        refreshEffect(player, MobEffects.DAMAGE_BOOST, amplifier, duration);
+        if (CommonConfig.NEGATIVE_EFFECT_3_BLINDNESS.get()) refreshEffect(player, MobEffects.BLINDNESS, 0, duration);
     }
 
     private static void refreshEffect(Player player, MobEffect effect, int amplifier, int duration) {
@@ -353,16 +387,50 @@ public class PlayerTickHandler {
     }
 
     @SubscribeEvent
-    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        Player player = event.getEntity();
-        if (player.level().isClientSide()) return;
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide) return;
 
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
-            BlockState blockState = event.getLevel().getBlockState(event.getPos());
-            if (!blockState.isAir()) {
-                stamina.consume((float) Settings.getInteractCost("click", true), (float) Settings.getInteractCost("click", false), getArmorStaminaMultiplier(player, "action"), player);
-            }
+            stamina.consume(
+                    (float) 0.65,
+                    (float) 0.03,
+                    getArmorStaminaMultiplier(player, "movement"),
+                    player
+            );
         });
+    }
+
+    @SubscribeEvent
+    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+
+        if (event.getLevel().isClientSide()) return;
+        if (event.isCanceled()) return;
+
+        BlockState state = event.getLevel().getBlockState(event.getPos());
+        if (!consumesStaminaOnInteraction(state)) return;
+
+        Player player = event.getEntity();
+
+        player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+            stamina.consume(
+                    (float) Settings.getInteractCost("click", true),
+                    (float) Settings.getInteractCost("click", false),
+                    getArmorStaminaMultiplier(player, "action"),
+                    player
+            );
+        });
+    }
+
+    private static boolean consumesStaminaOnInteraction(BlockState state) {
+        return state.is(BlockTags.DOORS)
+                || state.is(BlockTags.TRAPDOORS)
+                || state.is(BlockTags.BUTTONS)
+                || state.is(BlockTags.FENCE_GATES)
+                || state.is(BlockTags.WOODEN_DOORS)
+                || state.is(BlockTags.WOODEN_TRAPDOORS)
+                || state.is(BlockTags.BEDS)
+                || state.is(ModTags.Blocks.STAMINA_INTERACTIONS);
     }
 
     @SubscribeEvent
@@ -393,30 +461,80 @@ public class PlayerTickHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (player.isCreative() || player.isSpectator()) return;
 
-        double comfortThreshold = Settings.getComfortThresholdSleep();
+        // Ursprüngliches Comfort Requirement
+        double baseComfortThreshold = Settings.getComfortThresholdSleep();
+        double comfortThreshold;
+        if (CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_CAP.get()) {
+            // Aktuelle Long Stamina auslesen
+            final double[] longStaminaValue = {100.0};
+
+            player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+                longStaminaValue[0] = stamina.getLongStamina();
+            });
+
+            double longStamina = longStaminaValue[0];
+
+            // Berechnen, wie weit die Long Stamina unter dem Grenzwert liegt
+            double staminaDeficit = Math.max(
+                    0.0,
+                    CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_STAMINA_THRESHOLD.get() - longStamina
+            );
+
+            // Prozentuale Reduktion des Comfort Requirements
+            double reductionPercent = Math.min(
+                    100.0,
+                    staminaDeficit * CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_REDUCTION_MULTIPLIER.get()
+            );
+
+            // Effektives Comfort Requirement
+            comfortThreshold = baseComfortThreshold
+                    * (1.0 - reductionPercent / 100.0);
+        }
+        else comfortThreshold = baseComfortThreshold;
+
         BlockPos bedPos = event.getPos();
-        ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort((ServerLevel) player.level(), player, bedPos);
+
+        ComfortCalculator.ComfortResult comfortResult =
+                ComfortCalculator.calculateComfort(
+                        (ServerLevel) player.level(),
+                        player,
+                        bedPos
+                );
+
         double comfort = comfortResult.comfort;
         List<String> issues = comfortResult.issues;
 
         if (comfort < comfortThreshold) {
             event.setResult(Player.BedSleepingProblem.OTHER_PROBLEM);
-            player.displayClientMessage(ComfortUtils.getComfortMessage(player, comfort, comfortThreshold, issues), true);
+
+            player.displayClientMessage(
+                    ComfortUtils.getComfortMessage(
+                            player,
+                            comfort,
+                            comfortThreshold,
+                            issues
+                    ),
+                    true
+            );
         } else {
-            player.displayClientMessage(ComfortUtils.formatComfort(comfort), true);
+            player.displayClientMessage(
+                    ComfortUtils.formatComfort(comfort),
+                    true
+            );
         }
     }
+
 
 
     @SubscribeEvent
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-        float armDamage = 0;
         player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
             // stamina.consume(0.0025f, 0.0005f, armDamage, player);
-            stamina.consume((float) (Settings.getInteractCost("place", true) - Settings.getInteractCost("click", true)), (float) (Settings.getInteractCost("place", false) - Settings.getInteractCost("click", false)), getArmorStaminaMultiplier(player, "action"), player);
+            stamina.consume((float) (Settings.getInteractCost("place", true)), (float) (Settings.getInteractCost("place", false)), getArmorStaminaMultiplier(player, "action"), player);
         });
     }
+
 
     @SubscribeEvent
     public static void onFoodEaten(LivingEntityUseItemEvent.Finish event) {
@@ -425,20 +543,35 @@ public class PlayerTickHandler {
         ItemStack stack = event.getItem();
         Item item = stack.getItem();
 
-        if (item.isEdible()) {
-            FoodProperties food = item.getFoodProperties();
+        if (!item.isEdible()) return;
 
-            if (food != null) {
-                int nutrition = food.getNutrition();              // Hungerpunkte
-                float saturation = food.getSaturationModifier();  // Sättigungswert
+        FoodProperties food = item.getFoodProperties(stack, player);
 
-                // Stamina erhöhen
-                player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
-                    stamina.foodEaten(player, nutrition, saturation);
-                });
+        if (food == null) return;
+
+        int nutrition = food.getNutrition();
+        float saturation = food.getSaturationModifier();
+
+        // Optionale zusätzliche Regeneration suchen.
+        FoodStaminaRegeneration.Entry entry =
+                FoodStaminaRegeneration.find(stack);
+
+        player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+
+            // Bestehendes Verhalten bleibt erhalten.
+            stamina.foodEaten(player, nutrition, saturation);
+
+            // Zusätzliche Regeneration nur bei konfigurierten Items/Tags.
+            if (entry != null) {
+                stamina.regenerateFromFoodPercentage(
+                        player,
+                        entry.getShortPercent(),
+                        entry.getLongPercent()
+                );
             }
-        }
+        });
     }
+
 
     private static final Map<Entity, Vec3> lastPositions = new HashMap<>();
     private static final Map<UUID, Integer> vehicleTickCounter = new HashMap<>();
@@ -513,14 +646,17 @@ public class PlayerTickHandler {
             });
         });
     }
+
     @SubscribeEvent
     public static void onMount(EntityMountEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (player.level().isClientSide) return;
 
-        if (event.isMounting()) { // Spieler setzt sich hin
+        if (event.isMounting()) {
             Entity vehicle = event.getEntityBeingMounted();
+
             if (vehicle instanceof SeatEntity) return;
+
             if (vehicle instanceof Boat
                     || vehicle instanceof AbstractMinecart
                     || vehicle instanceof AbstractHorse) {
@@ -529,21 +665,70 @@ public class PlayerTickHandler {
 
             BlockPos mountPos = vehicle.blockPosition();
 
-            double comfortThreshold = Settings.getComfortThresholdSit();
-            ComfortCalculator.ComfortResult comfortResult = ComfortCalculator.calculateComfort((ServerLevel) player.level(), player, mountPos);
+            // Ursprüngliche Comfort-Anforderung für das Sitzen
+            double baseComfortThreshold = Settings.getComfortThresholdSit();
+            double comfortThreshold;
+
+            if (CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_CAP.get()) {
+                final double[] longStaminaValue = {100.0};
+
+                player.getCapability(StaminaProvider.PLAYER_STAMINA).ifPresent(stamina -> {
+                    longStaminaValue[0] = stamina.getLongStamina();
+                });
+
+                double longStamina = longStaminaValue[0];
+
+                double staminaDeficit = Math.max(
+                        0.0,
+                        CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_STAMINA_THRESHOLD.get()
+                                - longStamina
+                );
+
+                double reductionPercent = Math.min(
+                        100.0,
+                        staminaDeficit
+                                * CommonConfig.DYNAMIC_COMFORT_REQUIREMENT_REDUCTION_MULTIPLIER.get()
+                );
+
+                comfortThreshold = baseComfortThreshold
+                        * (1.0 - reductionPercent / 100.0);
+            } else {
+                comfortThreshold = baseComfortThreshold;
+            }
+
+            // Comfort berechnen
+            ComfortCalculator.ComfortResult comfortResult =
+                    ComfortCalculator.calculateComfort(
+                            (ServerLevel) player.level(),
+                            player,
+                            mountPos
+                    );
+
             double comfort = comfortResult.comfort;
             List<String> issues = comfortResult.issues;
 
             if (comfort < comfortThreshold) {
-                player.displayClientMessage(ComfortUtils.getComfortMessage(player, comfort, comfortThreshold, issues), true);
+                player.displayClientMessage(
+                        ComfortUtils.getComfortMessage(
+                                player,
+                                comfort,
+                                comfortThreshold,
+                                issues
+                        ),
+                        true
+                );
             } else {
-                player.displayClientMessage(ComfortUtils.formatComfort(comfort), true);
+                player.displayClientMessage(
+                        ComfortUtils.formatComfort(comfort),
+                        true
+                );
             }
 
             player.getCapability(ComfortProvider.COMFORT_CAP).ifPresent(cap -> {
                 cap.setComfortLevel(comfort);
-                cap.setSitting(true); // optional Flag für Tick
+                cap.setSitting(true);
             });
         }
     }
+
 }

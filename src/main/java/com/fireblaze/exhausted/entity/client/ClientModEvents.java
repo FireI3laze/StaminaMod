@@ -12,7 +12,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        System.out.println("[StaminaMod] Registering SeatEntity renderer: " + ModEntities.SEAT.getId());
+        //System.out.println("[StaminaMod] Registering SeatEntity renderer: " + ModEntities.SEAT.getId());
         event.registerEntityRenderer(ModEntities.SEAT.get(), SeatRenderer::new);
     }
 }

@@ -1,5 +1,6 @@
 package com.fireblaze.exhausted.capability;
 
+import com.fireblaze.exhausted.config.CommonConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -7,19 +8,15 @@ import net.minecraft.world.entity.player.Player;
 import com.fireblaze.exhausted.config.Settings;
 import net.minecraft.sounds.SoundSource;
 
-import java.util.Objects;
-
 public class Stamina {
     private float shortStamina = 100.0F;
     private float longStamina = 100.0F;
-    private static final float MIN_STAMINA = 0.0F;
-    private static final float MAX_STAMINA = 100.0F;
     private float BASE_REGEN;
     private float AMPLIFIED_REGEN;
     private int staminaLvl = 0;
+    private static final int MAX_STAMINA = 100;
     private static final int MAX_STAMINA_LEVEL = 20;
     private float staminaExp = 0.0F;
-    private int tickCounter = 0;
 
     public Stamina() {
     }
@@ -83,7 +80,8 @@ public class Stamina {
     }
 
     public void addExperience(float exp_gains, Player player) {
-        this.staminaExp += exp_gains;
+        if (!CommonConfig.DISABLE_EXPERIENCE_GAIN.get()) return;
+        this.staminaExp += (float) (exp_gains * CommonConfig.EXPERIENCE_GAIN_PERCENTAGE.get());
 
         while(this.staminaExp >= this.getExperienceToNextLevel() && this.staminaLvl < 20) {
             this.staminaExp -= this.getExperienceToNextLevel();
@@ -98,7 +96,10 @@ public class Stamina {
     }
 
     private float getExperienceToNextLevel() {
-        return (float)(100 * this.staminaLvl * this.staminaLvl);
+        return (float)(
+                CommonConfig.XP_BASE.get() *
+                        Math.pow(this.staminaLvl, CommonConfig.XP_EXPONENT.get())
+        );
     }
 
     private void onLevelUp(Player player) {
@@ -112,17 +113,50 @@ public class Stamina {
         player.playNotifySound(SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
-    public void strength_add_exp(String bodyPart, float exp_gains) {
-        if (!Objects.equals(bodyPart, "leg") && Objects.equals(bodyPart, "arm")) {
+    public float resetStamina() {
+        this.shortStamina = MAX_STAMINA;
+        this.longStamina = MAX_STAMINA;
+
+        return MAX_STAMINA;
+    }
+
+    public float restoreStaminaPercentage(float percentage) {
+        float targetStamina = MAX_STAMINA * percentage;
+
+        if (longStamina < targetStamina) {
+            longStamina = targetStamina;
         }
 
+        shortStamina = longStamina;
+
+        return longStamina;
     }
 
-    public float resetStamina() {
-        this.shortStamina = 100.0F;
-        this.longStamina = 100.0F;
-        return 100.0F;
+
+    public void regenerateFromFoodPercentage(
+            Player player,
+            float shortPercent,
+            float longPercent
+    ) {
+        if (player.isCreative() || player.isSpectator()) return;
+
+        // Prozentwerte in Stamina-Punkte umrechnen.
+        float shortGain = 100.0F * Math.max(0.0F, shortPercent) / 100.0F;
+        float longGain = 100.0F * Math.max(0.0F, longPercent) / 100.0F;
+
+        // Long Stamina zuerst regenerieren.
+        this.longStamina = Math.min(
+                100.0F,
+                this.longStamina + longGain
+        );
+
+        // Short Stamina darf Long Stamina nicht überschreiten.
+        this.shortStamina = Math.min(
+                this.longStamina,
+                this.shortStamina + shortGain
+        );
     }
+
 
     public float getShortStamina() {
         return this.shortStamina;

@@ -30,11 +30,9 @@ public class JumpModifyHandler {
 
             if (shortStam <= Settings.getNegativeEffect3Threshold()) {
                 verticalBoost = 0.25;
-                horizontalBoost = 0.25;
 
             } else if (shortStam <= Settings.getNegativeEffect2Threshold()) {
                 verticalBoost = 0.5;
-                horizontalBoost = 0.5;
             } else {
                 return;
             }

@@ -25,8 +25,7 @@ public class CameraShakeHandler {
         long current = System.currentTimeMillis();
 
         // Immer neuen Effekt starten
-        System.out.printf("[CameraShake] ➤ Neuer Effekt gestartet: Intensität=%.2f, Frequenz=%.2f, Dauer=%dms%n",
-                newIntensity, newFrequency, durationMs);
+        //System.out.printf("[CameraShake] ➤ Neuer Effekt gestartet: Intensität=%.2f, Frequenz=%.2f, Dauer=%dms%n", newIntensity, newFrequency, durationMs);
 
         startTime = current;
         endTime = current + durationMs;
@@ -48,7 +47,7 @@ public class CameraShakeHandler {
 
         if (current >= endTime || (currentIntensity <= 0.01f && targetIntensity <= 0.01f)) {
             if (active) {
-                System.out.println("[CameraShake] ✦ Effekt beendet.");
+                //System.out.println("[CameraShake] ✦ Effekt beendet.");
                 active = false;
             }
             return;

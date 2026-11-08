@@ -1,3 +1,4 @@
+
 package com.fireblaze.exhausted.items;
 
 import com.fireblaze.exhausted.networking.ModMessages;
@@ -6,9 +7,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class StepUpBootsHandler {
+
     public static void register() {
         MinecraftForge.EVENT_BUS.register(StepUpBootsHandler.class);
     }
@@ -18,9 +21,26 @@ public class StepUpBootsHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         if (event.getSlot() == EquipmentSlot.FEET) {
-            boolean hasStepUpBoots = player.getInventory().getArmor(0).getItem() instanceof HikingBoots;
-            float stepHeight = hasStepUpBoots ? 1.0f : 0.6f;
-            ModMessages.sendToPlayer(new StepUpS2CPacket(stepHeight), player);
+            updateStepHeight(player);
         }
+    }
+
+    @SubscribeEvent
+    public static void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        updateStepHeight(player);
+    }
+
+    private static void updateStepHeight(ServerPlayer player) {
+        boolean hasStepUpBoots =
+                player.getInventory().getArmor(0).getItem() instanceof HikingBoots;
+
+        float stepHeight = hasStepUpBoots ? 1.0f : 0.6f;
+
+        ModMessages.sendToPlayer(
+                new StepUpS2CPacket(stepHeight),
+                player
+        );
     }
 }

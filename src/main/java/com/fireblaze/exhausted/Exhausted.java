@@ -1,7 +1,8 @@
 package com.fireblaze.exhausted;
 
 import com.fireblaze.exhausted.commands.StaminaCommands;
-import com.fireblaze.exhausted.config.StaminaConfig;
+import com.fireblaze.exhausted.config.ClientConfig;
+import com.fireblaze.exhausted.config.CommonConfig;
 import com.fireblaze.exhausted.items.ModItems;
 import com.fireblaze.exhausted.items.StepUpBootsHandler;
 import com.fireblaze.exhausted.networking.ModMessages;
@@ -58,7 +59,8 @@ public class Exhausted
         PlayerSleepHandler.register();
         MinecraftForge.EVENT_BUS.register(new ModEvents());
         MinecraftForge.EVENT_BUS.register(new ComfortEvents());
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, StaminaConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         ModSounds.register(FMLJavaModLoadingContext.get().getModEventBus());
         ModItems.register(modEventBus);
         StepUpBootsHandler.register();

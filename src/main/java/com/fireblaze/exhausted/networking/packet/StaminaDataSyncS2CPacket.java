@@ -20,10 +20,10 @@ public class StaminaDataSyncS2CPacket {
         this.staminaExp = staminaExp;
         this.staminaLvl = staminaLvl;
     }
-    public StaminaDataSyncS2CPacket(float maxStamina) {
-        this.shortStamina = maxStamina;
-        this.longStamina = maxStamina;
-        this.maxStamina = maxStamina;
+    public StaminaDataSyncS2CPacket(float refreshedStamina) {
+        this.shortStamina = refreshedStamina;
+        this.longStamina = refreshedStamina;
+        this.maxStamina = 100;
         this.staminaExp = 9990;
         this.staminaLvl = 10;
     }

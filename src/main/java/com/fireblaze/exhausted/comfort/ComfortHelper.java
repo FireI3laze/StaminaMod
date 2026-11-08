@@ -1,5 +1,6 @@
 package com.fireblaze.exhausted.comfort;
 
+import com.fireblaze.exhausted.config.CommonConfig;
 import com.fireblaze.exhausted.config.Settings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -11,18 +12,16 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 
 import java.util.*;
 
@@ -81,7 +80,7 @@ public class ComfortHelper {
         public int goodBlocks;
         public boolean decorated;
         public float averageLight;
-        public List<BlockPos> chestPositions = new ArrayList<>();
+        public List<BlockPos> containerPositions = new ArrayList<>();
         public Set<BlockPos> visitedPositions;
     }
 
@@ -139,7 +138,11 @@ public class ComfortHelper {
                     }
                 }
 
-                if (state.getBlock() instanceof ChestBlock) result.chestPositions.add(neighbor);
+                BlockEntity blockEntity = level.getBlockEntity(neighbor);
+
+                if (blockEntity instanceof Container) {
+                    result.containerPositions.add(neighbor);
+                }
             }
         }
 
@@ -210,19 +213,27 @@ public class ComfortHelper {
         return true;
     }
 
-    public static boolean chestWithFoodNearby(ServerLevel level, BlockPos pos) {
+    public static boolean inventoryWithFoodNearby(ServerLevel level, BlockPos pos) {
         RoomScanResults scan = getLastScan(level, pos);
         if (scan == null) return false;
 
-        for (BlockPos p : scan.chestPositions) {
+        for (BlockPos p : scan.containerPositions) {
+
             BlockEntity be = level.getBlockEntity(p);
-            if (be instanceof ChestBlockEntity chest) {
-                for (int i = 0; i < chest.getContainerSize(); i++) {
-                    ItemStack stack = chest.getItem(i);
-                    if (stack.isEdible()) return true;
+
+            if (be instanceof Container container) {
+
+                for (int i = 0; i < container.getContainerSize(); i++) {
+
+                    ItemStack stack = container.getItem(i);
+
+                    if (stack.isEdible()) {
+                        return true;
+                    }
                 }
             }
         }
+
         return false;
     }
 
@@ -263,20 +274,45 @@ public class ComfortHelper {
     }
 
     public static boolean hasBoostBlock(ServerLevel level, BlockPos pos) {
+
         RoomScanResults scan = getLastScan(level, pos);
-        if (scan == null || scan.visitedPositions == null) return false;
 
-        String dim = level.dimension().location().toString();
-        Map<String, String> boostMap = Settings.getDimensionBoostBlocks();
-        String blockId = boostMap.get(dim);
-        if (blockId == null) return false;
+        if (scan == null || scan.visitedPositions == null)
+            return false;
 
-        Block targetBlock = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
-        if (targetBlock == null) return false;
 
-        for (BlockPos p : scan.visitedPositions) {
-            if (level.getBlockState(p).is(targetBlock)) return true;
+        String dim = level.dimension()
+                .location()
+                .toString();
+
+
+        Map<String, List<String>> boostMap =
+                Settings.getDimensionBoostBlocks();
+
+        List<String> blocks = boostMap.get(dim);
+
+        if (blocks == null || blocks.isEmpty()) return false;
+
+        for (String id : blocks) {
+
+            ResourceLocation rl = ResourceLocation.parse(id);
+
+            if (!BuiltInRegistries.BLOCK.containsKey(rl)) {
+                System.err.println("[Exhausted] Unknown boost block: " + id);
+                continue;
+            }
+
+            Block targetBlock = BuiltInRegistries.BLOCK.get(rl);
+
+            for (BlockPos p : scan.visitedPositions) {
+
+                if (level.getBlockState(p).is(targetBlock)) {
+                    return true;
+                }
+            }
         }
+
+
         return false;
     }
 }
